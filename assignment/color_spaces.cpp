@@ -80,8 +80,6 @@ struct AlloApp : App {
   ControlGUI gui;
   ShaderProgram pointShader;
   Mesh mesh;
-  Mesh cube;
-  Mesh cylinder;
   vector<Vec3f> original;
 
   void onCreate() override {
@@ -93,9 +91,8 @@ struct AlloApp : App {
     pointShader.compile(vertexCode, fragmentCode, geometryCode);
 
     mesh.primitive(Mesh::POINTS);
-    cube.primitive(Mesh::POINTS);
 
-    const char* filename = "../rainbow.jpg";
+    const char* filename = "../windows.jpg";
     auto imageData = Image(filename);
     if (imageData.array().size() == 0) {
       std::cout << "failed to load image" << std::endl;
@@ -145,13 +142,6 @@ struct AlloApp : App {
     }
 
     if (k.key() == '2') { //rgb cube
-        //1. find the max and min vals of all r, g, and b
-        //2. take the actual pixel values and place them based on the cube through some interpolation ????
-
-
-        //what happens when two pixels are the same color?
-        //what happens when there isn't a pixel color for the spot on the cube? -> i think this is what is happening with bottom solution
-  
         // this doesn't look like a cube ... does it actually need to look like a cube?
         for (int i = 0; i < mesh.colors().size(); i++) { //loop through the colors
             //get the pixel color value
