@@ -92,7 +92,7 @@ struct AlloApp : App {
 
     mesh.primitive(Mesh::POINTS);
 
-    const char* filename = "../windows.jpg";
+    const char* filename = "../colorful2.png";
     auto imageData = Image(filename);
     if (imageData.array().size() == 0) {
       std::cout << "failed to load image" << std::endl;
@@ -152,10 +152,100 @@ struct AlloApp : App {
         }
     }
 
-    if (k.key() == '3') { //hsv cylinder
-        for (int i = 0; i < mesh.colors().size(); i++) {
-
+    if (k.key() == '3') { //hsv cylinder -> conversions taken from https://en.wikipedia.org/wiki/HSL_and_HSV
+        // find max vals for conversions
+        double minR, maxR = 0; 
+        //mesh.colors()[0].r;
+        double minG, maxG = 0;
+        //mesh.colors()[0].g;
+        double minB, maxB = 0;
+        //mesh.colors()[0].b;
+        for (auto& c : mesh.colors()) { 
+            if (c.r >= maxR) { maxR = c.r; }
+            if (c.g >= maxG) { maxG = c.g; }
+            if (c.b >= maxB) { maxB = c.b; }
+            
+            if (c.r <= minR) { minR = c.r; } 
+            if (c.g <= minG) { minG = c.g; } 
+            if (c.b <= minB) { minB = c.b; }
         }
+        
+        //calculate total max vals
+        double totMax = (maxR + maxG + maxB) / 3;
+        double totMin = (minR + minG + minB)  /  3;
+
+        std::cout << minR << " " << maxR << " " << minG << " " << maxG << " " << minB << " " << maxB << " " << totMax << " " << totMin << std::endl;
+        
+        for (int i = 0; i < mesh.colors().size(); i++) {
+            Vec3f col;
+            //handle x (hue)
+            if (mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0) {
+                std::cout << "black" << endl;
+                col = (0, 0, 0);
+            } else if (mesh.colors()[i].r == totMax) {
+                std::cout << "maxRed" << endl;
+                col.x = 60 * (0 + (mesh.colors()[i].g - mesh.colors()[i].b)/(totMax - totMin));
+            } else if (mesh.colors()[i].g == totMax) {
+                std::cout << "maxGreen" << endl;
+                col.x = 60 * (2 + (mesh.colors()[i].b - mesh.colors()[i].r)/(totMax - totMin));
+            } else if (mesh.colors()[i].b == totMax) {
+                std::cout << "maxBlue" << endl;
+                col.x = 60 * (4 + (mesh.colors()[i].r - mesh.colors()[i].g)/(totMax - totMin));
+            } else { std::cout << "nothing" << endl; }
+
+            // if (mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0) {
+            //     //std::cout << "black" << endl;
+            //     col = (0, 0, 0);
+            // } else if (mesh.colors()[i].r > mesh.colors()[i].g && mesh.colors()[i].r > mesh.colors()[i].b) {
+            //     //std::cout << "maxRed" << endl;
+            //     col.x = 60 * (0 + (mesh.colors()[i].g - mesh.colors()[i].b)/(totMax - totMin));
+            // } else if (mesh.colors()[i].g > mesh.colors()[i].r && mesh.colors()[i].g > mesh.colors()[i].b) {
+            //     //std::cout << "maxGreen" << endl;
+            //     col.x = 60 * (2 + (mesh.colors()[i].b - mesh.colors()[i].r)/(totMax - totMin));
+            // } else if (mesh.colors()[i].b > mesh.colors()[i].r && mesh.colors()[i].b > mesh.colors()[i].g) {
+            //     //std::cout << "maxBlue" << endl;
+            //     col.x = 60 * (4 + (mesh.colors()[i].r - mesh.colors()[i].g)/(totMax - totMin));
+            // } else { std::cout << "nothing" << endl; }
+
+            if (col.x < 0) {
+                col.x = col.x + 360;
+            }
+
+            //handle y (s) and z (v)
+            if (! mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0 ) {
+                col.y = (totMax - totMin)/totMax;
+                col.z = totMax;
+            }
+
+
+            //std::cout << col.x << " " << col.y << " " << col.z << " ";
+            // if (mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0) {
+            //     col.y = 0;
+            // } else if (mesh.colors()[i].r == maxR){
+            //     col.y = (maxR - minR)/maxR ;
+            //     //col.y = (totMax - totMin)/totMax ;
+            // } else if (mesh.colors()[i].g == maxG){
+            //     col.y = (maxG - minG)/maxG ;
+            // } else if (mesh.colors()[i].b == maxB){
+            //     col.y = (maxB - minB)/maxB ;
+            // }
+
+            //handle z (v)
+            // if (mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0) {
+            //     col.z = 0;
+            // } else if (mesh.colors()[i].r == maxR){
+            //     col.z = maxR;
+            //     //col.y = (totMax - totMin)/totMax ;
+            // } else if (mesh.colors()[i].g == maxG){
+            //     col.z = maxG;
+            // } else if (mesh.colors()[i].b == maxB){
+            //     col.z = maxB;
+            // }
+
+            mesh.vertices()[i] = col;
+        }
+
+
     }
 
      if (k.key() == '4') { //own thing
