@@ -160,38 +160,69 @@ struct AlloApp : App {
         //mesh.colors()[0].g;
         double minB, maxB = 0;
         //mesh.colors()[0].b;
-        for (auto& c : mesh.colors()) { 
-            if (c.r >= maxR) { maxR = c.r; }
-            if (c.g >= maxG) { maxG = c.g; }
-            if (c.b >= maxB) { maxB = c.b; }
+        // for (auto& c : mesh.colors()) { 
+        //     if (c.r >= maxR) { maxR = c.r; }
+        //     if (c.g >= maxG) { maxG = c.g; }
+        //     if (c.b >= maxB) { maxB = c.b; }
             
-            if (c.r <= minR) { minR = c.r; } 
-            if (c.g <= minG) { minG = c.g; } 
-            if (c.b <= minB) { minB = c.b; }
-        }
+        //     if (c.r <= minR) { minR = c.r; } 
+        //     if (c.g <= minG) { minG = c.g; } 
+        //     if (c.b <= minB) { minB = c.b; }
+        // }
         
         //calculate total max vals
-        double totMax = (maxR + maxG + maxB) / 3;
-        double totMin = (minR + minG + minB)  /  3;
+        // double totMax = (maxR + maxG + maxB) / 3;
+        // double totMin = (minR + minG + minB)  /  3;
 
-        std::cout << minR << " " << maxR << " " << minG << " " << maxG << " " << minB << " " << maxB << " " << totMax << " " << totMin << std::endl;
+        // std::cout << minR << " " << maxR << " " << minG << " " << maxG << " " << minB << " " << maxB << " " << totMax << " " << totMin << std::endl;
         
         for (int i = 0; i < mesh.colors().size(); i++) {
             Vec3f col;
             //handle x (hue)
+
+            double max, min = 0;
+
+            if (mesh.colors()[i].r > mesh.colors()[i].g && mesh.colors()[i].r > mesh.colors()[i].b) {
+                max = mesh.colors()[i].r;
+            } else if (mesh.colors()[i].g > mesh.colors()[i].r && mesh.colors()[i].g > mesh.colors()[i].b) {
+                max = mesh.colors()[i].g;
+            } else { 
+                max = mesh.colors()[i].b; 
+            }
+
+            if (mesh.colors()[i].r < mesh.colors()[i].g && mesh.colors()[i].r < mesh.colors()[i].b) {
+                min = mesh.colors()[i].r;
+            } else if (mesh.colors()[i].g < mesh.colors()[i].r && mesh.colors()[i].g < mesh.colors()[i].b) {
+                min = mesh.colors()[i].g;
+            } else { 
+                min = mesh.colors()[i].b; 
+            }
+
             if (mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0) {
                 std::cout << "black" << endl;
                 col = (0, 0, 0);
-            } else if (mesh.colors()[i].r == totMax) {
-                std::cout << "maxRed" << endl;
-                col.x = 60 * (0 + (mesh.colors()[i].g - mesh.colors()[i].b)/(totMax - totMin));
-            } else if (mesh.colors()[i].g == totMax) {
-                std::cout << "maxGreen" << endl;
-                col.x = 60 * (2 + (mesh.colors()[i].b - mesh.colors()[i].r)/(totMax - totMin));
-            } else if (mesh.colors()[i].b == totMax) {
-                std::cout << "maxBlue" << endl;
-                col.x = 60 * (4 + (mesh.colors()[i].r - mesh.colors()[i].g)/(totMax - totMin));
-            } else { std::cout << "nothing" << endl; }
+            } else if (mesh.colors()[i].r == max) { //if r is the greatest value
+                col.x = 60 * (0 + (mesh.colors()[i].g - mesh.colors()[i].b)/(max - min));
+            } else if (mesh.colors()[i].g == max) {
+                col.x = 60 * (2 + (mesh.colors()[i].b - mesh.colors()[i].r)/(max - min));
+            } else if (mesh.colors()[i].b == max) {
+                col.x = 60 * (4 + (mesh.colors()[i].r - mesh.colors()[i].g)/(max - min));
+            }
+
+
+            // if (mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0) {
+            //     std::cout << "black" << endl;
+            //     col = (0, 0, 0);
+            // } else if (mesh.colors()[i].r == totMax) {
+            //     std::cout << "maxRed" << endl;
+            //     col.x = 60 * (0 + (mesh.colors()[i].g - mesh.colors()[i].b)/(totMax - totMin));
+            // } else if (mesh.colors()[i].g == totMax) {
+            //     std::cout << "maxGreen" << endl;
+            //     col.x = 60 * (2 + (mesh.colors()[i].b - mesh.colors()[i].r)/(totMax - totMin));
+            // } else if (mesh.colors()[i].b == totMax) {
+            //     std::cout << "maxBlue" << endl;
+            //     col.x = 60 * (4 + (mesh.colors()[i].r - mesh.colors()[i].g)/(totMax - totMin));
+            // } else { std::cout << "nothing" << endl; }
 
             // if (mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0) {
             //     //std::cout << "black" << endl;
@@ -213,8 +244,8 @@ struct AlloApp : App {
 
             //handle y (s) and z (v)
             if (! mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0 ) {
-                col.y = (totMax - totMin)/totMax;
-                col.z = totMax;
+                col.y = (max - min)/max;
+                col.z = max;
             }
 
 
