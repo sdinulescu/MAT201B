@@ -9,17 +9,6 @@ using namespace al;
 #include <vector>
 using namespace std;
 
-// string slurp(string fileName) {
-//   fstream file(fileName);
-//   string returnValue = "";
-//   while (file.good()) {
-//     string line;
-//     getline(file, line);
-//     returnValue += line + "\n";
-//   }
-//   return returnValue;
-// }
-
 const char* vertexCode = R"(
 #version 400
 layout(location = 0) in vec3 vertexPosition;
@@ -152,134 +141,52 @@ struct AlloApp : App {
         }
     }
 
-    if (k.key() == '3') { //hsv cylinder -> conversions taken from https://en.wikipedia.org/wiki/HSL_and_HSV
-        // find max vals for conversions
-        double minR, maxR = 0; 
-        //mesh.colors()[0].r;
-        double minG, maxG = 0;
-        //mesh.colors()[0].g;
-        double minB, maxB = 0;
-        //mesh.colors()[0].b;
-        // for (auto& c : mesh.colors()) { 
-        //     if (c.r >= maxR) { maxR = c.r; }
-        //     if (c.g >= maxG) { maxG = c.g; }
-        //     if (c.b >= maxB) { maxB = c.b; }
-            
-        //     if (c.r <= minR) { minR = c.r; } 
-        //     if (c.g <= minG) { minG = c.g; } 
-        //     if (c.b <= minB) { minB = c.b; }
-        // }
-        
-        //calculate total max vals
-        // double totMax = (maxR + maxG + maxB) / 3;
-        // double totMin = (minR + minG + minB)  /  3;
-
-        // std::cout << minR << " " << maxR << " " << minG << " " << maxG << " " << minB << " " << maxB << " " << totMax << " " << totMin << std::endl;
-        
+    if (k.key() == '3') { //hsv cylinder -> conversions taken from https://en.wikipedia.org/wiki/HSL_and_HSV        
         for (int i = 0; i < mesh.colors().size(); i++) {
-            Vec3f col;
-            //handle x (hue)
+            double h = 0.0;
+            double s = 0.0;
+            double v = 0.0;
 
-            double max, min = 0;
+            double min = std::min( std::min(mesh.colors()[i].r, mesh.colors()[i].g), mesh.colors()[i].b );
+            double max = std::max( std::max(mesh.colors()[i].r, mesh.colors()[i].g), mesh.colors()[i].b );
 
-            if (mesh.colors()[i].r > mesh.colors()[i].g && mesh.colors()[i].r > mesh.colors()[i].b) {
-                max = mesh.colors()[i].r;
-            } else if (mesh.colors()[i].g > mesh.colors()[i].r && mesh.colors()[i].g > mesh.colors()[i].b) {
-                max = mesh.colors()[i].g;
-            } else { 
-                max = mesh.colors()[i].b; 
+            double delta = max - min;
+
+            //hue
+            if( max = min) {
+                h = 0.0;
+            } else if (mesh.colors()[i].r == max ) {
+                h =  (mesh.colors()[i].g - mesh.colors()[i].b ) / delta;     // between yellow & magenta
+            } else if( mesh.colors()[i].g == max ) {
+                h = 2.0 + ( mesh.colors()[i].b - mesh.colors()[i].r ) / delta;   // between cyan & yellow
+            } else {
+                h = 4.0 + ( mesh.colors()[i].r - mesh.colors()[i].g ) / delta;   // between magenta & cyan
             }
 
-            if (mesh.colors()[i].r < mesh.colors()[i].g && mesh.colors()[i].r < mesh.colors()[i].b) {
-                min = mesh.colors()[i].r;
-            } else if (mesh.colors()[i].g < mesh.colors()[i].r && mesh.colors()[i].g < mesh.colors()[i].b) {
-                min = mesh.colors()[i].g;
-            } else { 
-                min = mesh.colors()[i].b; 
+            h = h * 60.0;
+
+            if( h < 0.0 ) {h += 360.0;}
+
+            // saturation
+            if( max != 0.0 ) {
+                s = delta / max;
+            } else {
+                s = 0.0;
             }
-
-            if (mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0) {
-                std::cout << "black" << endl;
-                col = (0, 0, 0);
-            } else if (mesh.colors()[i].r == max) { //if r is the greatest value
-                col.x = 60 * (0 + (mesh.colors()[i].g - mesh.colors()[i].b)/(max - min));
-            } else if (mesh.colors()[i].g == max) {
-                col.x = 60 * (2 + (mesh.colors()[i].b - mesh.colors()[i].r)/(max - min));
-            } else if (mesh.colors()[i].b == max) {
-                col.x = 60 * (4 + (mesh.colors()[i].r - mesh.colors()[i].g)/(max - min));
-            }
-
-
-            // if (mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0) {
-            //     std::cout << "black" << endl;
-            //     col = (0, 0, 0);
-            // } else if (mesh.colors()[i].r == totMax) {
-            //     std::cout << "maxRed" << endl;
-            //     col.x = 60 * (0 + (mesh.colors()[i].g - mesh.colors()[i].b)/(totMax - totMin));
-            // } else if (mesh.colors()[i].g == totMax) {
-            //     std::cout << "maxGreen" << endl;
-            //     col.x = 60 * (2 + (mesh.colors()[i].b - mesh.colors()[i].r)/(totMax - totMin));
-            // } else if (mesh.colors()[i].b == totMax) {
-            //     std::cout << "maxBlue" << endl;
-            //     col.x = 60 * (4 + (mesh.colors()[i].r - mesh.colors()[i].g)/(totMax - totMin));
-            // } else { std::cout << "nothing" << endl; }
-
-            // if (mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0) {
-            //     //std::cout << "black" << endl;
-            //     col = (0, 0, 0);
-            // } else if (mesh.colors()[i].r > mesh.colors()[i].g && mesh.colors()[i].r > mesh.colors()[i].b) {
-            //     //std::cout << "maxRed" << endl;
-            //     col.x = 60 * (0 + (mesh.colors()[i].g - mesh.colors()[i].b)/(totMax - totMin));
-            // } else if (mesh.colors()[i].g > mesh.colors()[i].r && mesh.colors()[i].g > mesh.colors()[i].b) {
-            //     //std::cout << "maxGreen" << endl;
-            //     col.x = 60 * (2 + (mesh.colors()[i].b - mesh.colors()[i].r)/(totMax - totMin));
-            // } else if (mesh.colors()[i].b > mesh.colors()[i].r && mesh.colors()[i].b > mesh.colors()[i].g) {
-            //     //std::cout << "maxBlue" << endl;
-            //     col.x = 60 * (4 + (mesh.colors()[i].r - mesh.colors()[i].g)/(totMax - totMin));
-            // } else { std::cout << "nothing" << endl; }
-
-            if (col.x < 0) {
-                col.x = col.x + 360;
-            }
-
-            //handle y (s) and z (v)
-            if (! mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0 ) {
-                col.y = (max - min)/max;
-                col.z = max;
-            }
-
-
-            //std::cout << col.x << " " << col.y << " " << col.z << " ";
-            // if (mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0) {
-            //     col.y = 0;
-            // } else if (mesh.colors()[i].r == maxR){
-            //     col.y = (maxR - minR)/maxR ;
-            //     //col.y = (totMax - totMin)/totMax ;
-            // } else if (mesh.colors()[i].g == maxG){
-            //     col.y = (maxG - minG)/maxG ;
-            // } else if (mesh.colors()[i].b == maxB){
-            //     col.y = (maxB - minB)/maxB ;
-            // }
-
-            //handle z (v)
-            // if (mesh.colors()[i].r == mesh.colors()[i].g == mesh.colors()[i].b == 0) {
-            //     col.z = 0;
-            // } else if (mesh.colors()[i].r == maxR){
-            //     col.z = maxR;
-            //     //col.y = (totMax - totMin)/totMax ;
-            // } else if (mesh.colors()[i].g == maxG){
-            //     col.z = maxG;
-            // } else if (mesh.colors()[i].b == maxB){
-            //     col.z = maxB;
-            // }
-
-            mesh.vertices()[i] = col;
+            
+            // value
+            v = max;
+            
+            mesh.vertices()[i] = Vec3f(h, s, v) / 100; //divide to get the whole thing on screen (could also move nav???)
         }
-
-
     }
 
-     if (k.key() == '4') { //own thing
+    // TO DO : ANIMATE
+    // Take the final position that is calculated and make the points travel frame by frame to the final destination
+    // final - initial = vector of distance traveled
+    // step through, adding to the previous position
+
+     if (k.key() == '4') { //own thing -> no ideas yet here
         for (int i = 0; i < mesh.vertices().size(); i++) {
 
         }
