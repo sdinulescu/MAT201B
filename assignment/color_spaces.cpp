@@ -70,6 +70,11 @@ struct AlloApp : App {
   ShaderProgram pointShader;
   Mesh mesh;
   vector<Vec3f> original;
+  vector<Vec3f> cube;
+  vector<Vec3f> cylinder;
+  vector<Vec3f> distance;
+
+  int keyPressed = -1;
 
   void onCreate() override {
     //
@@ -104,6 +109,7 @@ struct AlloApp : App {
   }
 
   bool freeze = false;
+  
   void onAnimate(double dt) override {
     if (freeze) return;
 
@@ -117,6 +123,16 @@ struct AlloApp : App {
       //
       v += rv() * 0.01;
     }
+  
+  }
+
+  void moveImage(vector<Vec3f> vec, float duration) {
+
+    for (int i = 0; i < mesh.vertices().size(); i++) {
+      distance.push_back(dist(mesh.vertices()[i], vec[i]));
+    }
+    int counter = 0;
+    //while(counter * duration != distance)
   }
 
   bool onKeyDown(const Keyboard& k) override {
@@ -131,54 +147,64 @@ struct AlloApp : App {
     }
 
     if (k.key() == '2') { //rgb cube
-        // this doesn't look like a cube ... does it actually need to look like a cube?
-        for (int i = 0; i < mesh.colors().size(); i++) { //loop through the colors
-            //get the pixel color value
-            Vec3f col(mesh.colors()[i].r, mesh.colors()[i].g, mesh.colors()[i].b);
-            //assign a position based on the color
-            mesh.vertices()[i] = col;
-            //printf("%f", mesh.colors()[i].rgb());
-        }
+      for (int i = 0; i < mesh.colors().size(); i++) { //loop through the colors
+        //get the pixel color value
+        Vec3f col(mesh.colors()[i].r, mesh.colors()[i].g, mesh.colors()[i].b);
+        //assign a position based on the color
+        cube.push_back(col);
+        //printf("%f", mesh.colors()[i].rgb());
+      }
+
+      for (int i = 0; i < mesh.vertices().size(); i++) {
+        mesh.vertices()[i].lerp(cube[i], 0.05);
+      }
     }
 
-    if (k.key() == '3') { //hsv cylinder -> conversions taken from https://en.wikipedia.org/wiki/HSL_and_HSV        
-        for (int i = 0; i < mesh.colors().size(); i++) {
-            double h = 0.0;
-            double s = 0.0;
-            double v = 0.0;
+    if (k.key() == '3') { //hsv cylinder -> conversions taken from https://en.wikipedia.org/wiki/HSL_and_HSV 
+      for (int i = 0; i < mesh.colors().size(); i++) {
+        double h = 0.0;
+        double s = 0.0;
+        double v = 0.0;
 
-            double min = std::min( std::min(mesh.colors()[i].r, mesh.colors()[i].g), mesh.colors()[i].b );
-            double max = std::max( std::max(mesh.colors()[i].r, mesh.colors()[i].g), mesh.colors()[i].b );
+        double min = std::min( std::min(mesh.colors()[i].r, mesh.colors()[i].g), mesh.colors()[i].b );
+        double max = std::max( std::max(mesh.colors()[i].r, mesh.colors()[i].g), mesh.colors()[i].b );
 
-            double delta = max - min;
+        double delta = max - min;
 
-            //hue
-            if( max = min) {
-                h = 0.0;
-            } else if (mesh.colors()[i].r == max ) {
-                h =  (mesh.colors()[i].g - mesh.colors()[i].b ) / delta;     // between yellow & magenta
-            } else if( mesh.colors()[i].g == max ) {
-                h = 2.0 + ( mesh.colors()[i].b - mesh.colors()[i].r ) / delta;   // between cyan & yellow
-            } else {
-                h = 4.0 + ( mesh.colors()[i].r - mesh.colors()[i].g ) / delta;   // between magenta & cyan
-            }
-
-            h = h * 60.0;
-
-            if( h < 0.0 ) {h += 360.0;}
-
-            // saturation
-            if( max != 0.0 ) {
-                s = delta / max;
-            } else {
-                s = 0.0;
-            }
-            
-            // value
-            v = max;
-            
-            mesh.vertices()[i] = Vec3f(h, s, v) / 100; //divide to get the whole thing on screen (could also move nav???)
+        //hue
+        if( max = min) {
+            h = 0.0;
+        } else if (mesh.colors()[i].r == max ) {
+            h =  (mesh.colors()[i].g - mesh.colors()[i].b ) / delta;     // between yellow & magenta
+        } else if( mesh.colors()[i].g == max ) {
+            h = 2.0 + ( mesh.colors()[i].b - mesh.colors()[i].r ) / delta;   // between cyan & yellow
+        } else {
+            h = 4.0 + ( mesh.colors()[i].r - mesh.colors()[i].g ) / delta;   // between magenta & cyan
         }
+
+        h = h * 60.0;
+
+        if( h < 0.0 ) {h += 360.0;}
+
+        // saturation
+        if( max != 0.0 ) {
+            s = delta / max;
+        } else {
+            s = 0.0;
+        }
+        
+        // value
+        v = max;
+
+        
+        cylinder.push_back(  Vec3f(h, s, v) / 100  ); //divide to get the whole thing on screen (could also move nav???)
+      }
+
+      
+      //how to repeat until everything is in position over 1 second?
+      for (int i = 0; i < mesh.vertices().size(); i++) {
+        mesh.vertices()[i].lerp(cylinder[i], 0.05);
+      }
     }
 
     // TO DO : ANIMATE
