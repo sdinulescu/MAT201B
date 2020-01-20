@@ -72,7 +72,7 @@ struct AlloApp : App {
   vector<Vec3f> original;
   vector<Vec3f> cube;
   vector<Vec3f> cylinder;
-  vector<Vec3f> distance;
+  //vector<Vec3f> distance;
 
   int keyPressed = -1;
 
@@ -179,9 +179,8 @@ struct AlloApp : App {
     }
   }
 
-  void moveImage(vector<Vec3f> vec, float thresh) {
-    // TO DO : ANIMATE
-    // Take the final position that is calculated and make the points travel frame by frame to the final destination
+  void moveImage(vector<Vec3f> vec, float thresh, Graphics& g) {
+    // Animate: take the final position that is calculated and make the points travel frame by frame to the final destination
     // final - initial = vector of distance traveled
     // step through, adding to the previous position
 
@@ -194,7 +193,7 @@ struct AlloApp : App {
         maxDist = d;
         index = i;
       }
-      distance.push_back(d);
+      //distance.push_back(d);
     }
 
     // different methods of interpolation
@@ -220,6 +219,7 @@ struct AlloApp : App {
         for (int i = 0; i < mesh.vertices().size(); i++) {
           mesh.vertices()[i].lerp(vec[i], thresh); //linear interpolation between positions
         }
+        g.draw(mesh);
     }
 
     //HOW DO I SLOW DOWN THE MOVEMENT HERE?
@@ -235,19 +235,21 @@ struct AlloApp : App {
     }
 
     if (k.key() == '1') { //back to original image
+      cubeDraw = false;
+      cylinderDraw = false;
       for (int i = 0; i < mesh.vertices().size(); i++) {
         mesh.vertices()[i] = original[i];
       }
     }
 
     if (k.key() == '2') { //rgb cube
-      
-      moveImage(cube, 0.01);
+      cubeDraw = true;
+      cylinderDraw = false;
     }
 
     if (k.key() == '3') { //hsv cylinder -> conversions taken from https://en.wikipedia.org/wiki/HSL_and_HSV 
-      
-      moveImage(cylinder, 0.01);
+      cylinderDraw = true;
+      cubeDraw = false;
     }
 
      if (k.key() == '4') { //own thing -> no ideas yet here
@@ -263,6 +265,12 @@ struct AlloApp : App {
     g.shader(pointShader);
     g.shader().uniform("pointSize", pointSize / 100);
     g.depthTesting(true);
+    //g.draw(mesh);
+    if (cubeDraw == true) {
+      moveImage(cube, 0.01, g);
+    } else if (cylinderDraw == true) {
+      moveImage(cylinder, 0.01, g);
+    }
     g.draw(mesh);
     gui.draw(g);
   }
