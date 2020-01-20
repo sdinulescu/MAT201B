@@ -232,6 +232,7 @@ struct AlloApp : App {
     }
 
     if (k.key() == '1') { //back to original image
+      nav().pos(0, 0, 10);
       cubeDraw = false;
       cylinderDraw = false;
       for (int i = 0; i < mesh.vertices().size(); i++) {
@@ -240,11 +241,13 @@ struct AlloApp : App {
     }
 
     if (k.key() == '2') { //rgb cube
+      nav().pos(0, 0, 10);
       cubeDraw = true;
       cylinderDraw = false;
     }
 
     if (k.key() == '3') { //hsv cylinder -> conversions taken from https://en.wikipedia.org/wiki/HSL_and_HSV 
+      nav().pos(2, 0, 10);
       cylinderDraw = true;
       cubeDraw = false;
     }
