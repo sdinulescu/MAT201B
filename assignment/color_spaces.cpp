@@ -221,9 +221,6 @@ struct AlloApp : App {
         }
         g.draw(mesh);
     }
-
-    //HOW DO I SLOW DOWN THE MOVEMENT HERE?
-    // -> THE PROBLEM IS I'M NOT DRAWING THE MESHES ON EVERY LOOP IN BETWEEN INTERPOLATION STEPS...
   }
 
   bool cubeDraw = false;
@@ -265,7 +262,6 @@ struct AlloApp : App {
     g.shader(pointShader);
     g.shader().uniform("pointSize", pointSize / 100);
     g.depthTesting(true);
-    //g.draw(mesh);
     if (cubeDraw == true) {
       moveImage(cube, 0.01, g);
     } else if (cylinderDraw == true) {
