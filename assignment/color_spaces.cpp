@@ -76,6 +76,57 @@ struct AlloApp : App {
 
   int keyPressed = -1;
 
+  void calcCube() { //rgb cube
+    for (int i = 0; i < mesh.colors().size(); i++) { //loop through the colors
+      //get the pixel color value
+      Vec3f col(mesh.colors()[i].r, mesh.colors()[i].g, mesh.colors()[i].b);
+      //assign a position based on the color
+      cube.push_back(col);
+      //printf("%f", mesh.colors()[i].rgb());
+    }
+  }
+
+  void calcCylinder() { //hsv cylinder -> conversions taken from https://en.wikipedia.org/wiki/HSL_and_HSV 
+    for (int i = 0; i < mesh.colors().size(); i++) {
+      double h = 0.0;
+      double s = 0.0;
+      double v = 0.0;
+
+      double min = std::min( std::min(mesh.colors()[i].r, mesh.colors()[i].g), mesh.colors()[i].b );
+      double max = std::max( std::max(mesh.colors()[i].r, mesh.colors()[i].g), mesh.colors()[i].b );
+
+      double delta = max - min;
+
+      //hue
+      if( max == min) {
+          h = 0.0;
+      } else if (mesh.colors()[i].r == max ) {
+          h =  (mesh.colors()[i].g - mesh.colors()[i].b ) / delta;     // between yellow & magenta
+      } else if( mesh.colors()[i].g == max ) {
+          h = 2.0 + ( mesh.colors()[i].b - mesh.colors()[i].r ) / delta;   // between cyan & yellow
+      } else {
+          h = 4.0 + ( mesh.colors()[i].r - mesh.colors()[i].g ) / delta;   // between magenta & cyan
+      }
+
+      h = h * 60.0;
+
+      if( h < 0.0 ) {h += 360.0;}
+
+      // saturation
+      if( max != 0.0 ) {
+          s = delta / max;
+      } else {
+          s = 0.0;
+      }
+      
+      // value
+      v = max;
+
+      
+      cylinder.push_back(  Vec3f(h, s, v) / 100  ); //divide to get the whole thing on screen (could also move nav???)
+    }
+  }
+
   void onCreate() override {
     //
     gui << pointSize;
@@ -106,10 +157,13 @@ struct AlloApp : App {
       }
 
     nav().pos(0, 0, 10);
+
+    //compute calculations only once at the beginning to improve efficiency of the program
+    calcCube();
+    calcCylinder();
   }
 
   bool freeze = false;
-  
   void onAnimate(double dt) override {
     if (freeze) return;
 
@@ -123,17 +177,57 @@ struct AlloApp : App {
       //
       v += rv() * 0.01;
     }
-  
   }
 
-  void moveImage(vector<Vec3f> vec, float duration) {
+  void moveImage(vector<Vec3f> vec, float thresh) {
+    // TO DO : ANIMATE
+    // Take the final position that is calculated and make the points travel frame by frame to the final destination
+    // final - initial = vector of distance traveled
+    // step through, adding to the previous position
 
+    Vec3f maxDist(0, 0, 0);
+    int index = 0;
     for (int i = 0; i < mesh.vertices().size(); i++) {
-      distance.push_back(dist(mesh.vertices()[i], vec[i]));
+      Vec3f d( (vec[i].x - mesh.vertices()[i].x), (vec[i].y - mesh.vertices()[i].y), (vec[i].z - mesh.vertices()[i].z));
+      //std::cout << d << std::endl;
+      if (d > maxDist) {
+        maxDist = d;
+        index = i;
+      }
+      distance.push_back(d);
     }
-    int counter = 0;
-    //while(counter * duration != distance)
+
+    // different methods of interpolation
+    //both of these work for cube but not cylinder -> probably because cylinder isn't linear and cube is?
+    // while(  mesh.vertices()[index] < vec[index]  ) {
+    //   for(int i = 0; i < mesh.vertices().size();i++) {
+        
+    //     mesh.vertices()[i].x = mesh.vertices()[i].x + distance[i].x/60;
+    //     mesh.vertices()[i].y = mesh.vertices()[i].y + distance[i].y/60;
+    //     mesh.vertices()[i].z = mesh.vertices()[i].z + distance[i].z/60;
+    //   }
+    // }
+    // while(  mesh.vertices()[index] < vec[index]  ) {
+    //   std::cout << mesh.vertices()[index] << " " << vec[index] << std::endl;
+    //   for(int i = 0; i < mesh.vertices().size();i++) {
+    //     mesh.vertices()[i].lerp( (mesh.vertices()[i] + distance[i]/60), 0.5  );
+    //   }
+    // }
+
+    //while the one pixel who has to travel the max distance gets to it's final location
+    while(  mesh.vertices()[index] < (vec[index] - Vec3f(thresh))  ) { 
+      //std::cout << mesh.vertices()[index] << " " << vec[index] << std::endl;
+        for (int i = 0; i < mesh.vertices().size(); i++) {
+          mesh.vertices()[i].lerp(vec[i], thresh); //linear interpolation between positions
+        }
+    }
+
+    //HOW DO I SLOW DOWN THE MOVEMENT HERE?
+    // -> THE PROBLEM IS I'M NOT DRAWING THE MESHES ON EVERY LOOP IN BETWEEN INTERPOLATION STEPS...
   }
+
+  bool cubeDraw = false;
+  bool cylinderDraw = false;
 
   bool onKeyDown(const Keyboard& k) override {
     if (k.key() == ' ') {
@@ -147,70 +241,14 @@ struct AlloApp : App {
     }
 
     if (k.key() == '2') { //rgb cube
-      for (int i = 0; i < mesh.colors().size(); i++) { //loop through the colors
-        //get the pixel color value
-        Vec3f col(mesh.colors()[i].r, mesh.colors()[i].g, mesh.colors()[i].b);
-        //assign a position based on the color
-        cube.push_back(col);
-        //printf("%f", mesh.colors()[i].rgb());
-      }
-
-      for (int i = 0; i < mesh.vertices().size(); i++) {
-        mesh.vertices()[i].lerp(cube[i], 0.05);
-      }
+      
+      moveImage(cube, 0.01);
     }
 
     if (k.key() == '3') { //hsv cylinder -> conversions taken from https://en.wikipedia.org/wiki/HSL_and_HSV 
-      for (int i = 0; i < mesh.colors().size(); i++) {
-        double h = 0.0;
-        double s = 0.0;
-        double v = 0.0;
-
-        double min = std::min( std::min(mesh.colors()[i].r, mesh.colors()[i].g), mesh.colors()[i].b );
-        double max = std::max( std::max(mesh.colors()[i].r, mesh.colors()[i].g), mesh.colors()[i].b );
-
-        double delta = max - min;
-
-        //hue
-        if( max = min) {
-            h = 0.0;
-        } else if (mesh.colors()[i].r == max ) {
-            h =  (mesh.colors()[i].g - mesh.colors()[i].b ) / delta;     // between yellow & magenta
-        } else if( mesh.colors()[i].g == max ) {
-            h = 2.0 + ( mesh.colors()[i].b - mesh.colors()[i].r ) / delta;   // between cyan & yellow
-        } else {
-            h = 4.0 + ( mesh.colors()[i].r - mesh.colors()[i].g ) / delta;   // between magenta & cyan
-        }
-
-        h = h * 60.0;
-
-        if( h < 0.0 ) {h += 360.0;}
-
-        // saturation
-        if( max != 0.0 ) {
-            s = delta / max;
-        } else {
-            s = 0.0;
-        }
-        
-        // value
-        v = max;
-
-        
-        cylinder.push_back(  Vec3f(h, s, v) / 100  ); //divide to get the whole thing on screen (could also move nav???)
-      }
-
       
-      //how to repeat until everything is in position over 1 second?
-      for (int i = 0; i < mesh.vertices().size(); i++) {
-        mesh.vertices()[i].lerp(cylinder[i], 0.05);
-      }
+      moveImage(cylinder, 0.01);
     }
-
-    // TO DO : ANIMATE
-    // Take the final position that is calculated and make the points travel frame by frame to the final destination
-    // final - initial = vector of distance traveled
-    // step through, adding to the previous position
 
      if (k.key() == '4') { //own thing -> no ideas yet here
         for (int i = 0; i < mesh.vertices().size(); i++) {
