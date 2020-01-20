@@ -72,9 +72,8 @@ struct AlloApp : App {
   vector<Vec3f> original;
   vector<Vec3f> cube;
   vector<Vec3f> cylinder;
-  //vector<Vec3f> distance;
-
-  int keyPressed = -1;
+  vector<Vec3f> waves;
+  vector<Vec3f> hsv;
 
   void calcCube() { //rgb cube
     for (int i = 0; i < mesh.colors().size(); i++) { //loop through the colors
@@ -122,13 +121,19 @@ struct AlloApp : App {
       // value
       v = max;
 
-      
+      hsv.push_back(Vec3f(h, s, v) / 5);
       cylinder.push_back(  Vec3f(h, s, v) / 100  ); //divide to get the whole thing on screen (could also move nav???)
     }
   }
 
+  void calcWaves() {
+    for (int i = 0; i < mesh.vertices().size(); i++) {
+      Vec3f col(abs(mesh.colors()[i].r + hsv[i].x * 0.2), abs(mesh.colors()[i].g - hsv[i].y), abs(mesh.colors()[i].b - hsv[i].z * 0.6));
+      waves.push_back(col);
+    }
+  }
+
   void onCreate() override {
-    //
     gui << pointSize;
     gui.init();
     navControl().useMouse(false);
@@ -161,6 +166,7 @@ struct AlloApp : App {
     //compute calculations only once at the beginning to improve efficiency of the program
     calcCube();
     calcCylinder();
+    calcWaves();
   }
 
   bool freeze = false;
@@ -214,7 +220,7 @@ struct AlloApp : App {
     // }
 
     //while the one pixel who has to travel the max distance gets to it's final location
-    while(  mesh.vertices()[index] < (vec[index] - Vec3f(thresh))  ) { 
+    while(  abs(mesh.vertices()[index].x) < abs(vec[index].x) - thresh*2  ) { 
       //std::cout << mesh.vertices()[index] << " " << vec[index] << std::endl;
         for (int i = 0; i < mesh.vertices().size(); i++) {
           mesh.vertices()[i].lerp(vec[i], thresh); //linear interpolation between positions
@@ -225,6 +231,7 @@ struct AlloApp : App {
 
   bool cubeDraw = false;
   bool cylinderDraw = false;
+  bool wavesDraw = false;
 
   bool onKeyDown(const Keyboard& k) override {
     if (k.key() == ' ') {
@@ -235,6 +242,7 @@ struct AlloApp : App {
       nav().pos(0, 0, 10);
       cubeDraw = false;
       cylinderDraw = false;
+      wavesDraw = false;
       for (int i = 0; i < mesh.vertices().size(); i++) {
         mesh.vertices()[i] = original[i];
       }
@@ -244,18 +252,21 @@ struct AlloApp : App {
       nav().pos(0, 0, 10);
       cubeDraw = true;
       cylinderDraw = false;
+      wavesDraw = false;
     }
 
     if (k.key() == '3') { //hsv cylinder -> conversions taken from https://en.wikipedia.org/wiki/HSL_and_HSV 
       nav().pos(2, 0, 10);
-      cylinderDraw = true;
       cubeDraw = false;
+      cylinderDraw = true;
+      wavesDraw = false;
     }
 
-     if (k.key() == '4') { //own thing -> no ideas yet here
-        for (int i = 0; i < mesh.vertices().size(); i++) {
-
-        }
+     if (k.key() == '4') { //wave-like forms from the pixels
+        nav().pos(7, 0, 25);
+        cubeDraw = false;
+        cylinderDraw = false;
+        wavesDraw = true;
     }
     return true;
   }
@@ -269,6 +280,8 @@ struct AlloApp : App {
       moveImage(cube, 0.01, g);
     } else if (cylinderDraw == true) {
       moveImage(cylinder, 0.01, g);
+    } else if (wavesDraw == true) {
+      moveImage(waves, 0.01, g);
     }
     g.draw(mesh);
     gui.draw(g);
