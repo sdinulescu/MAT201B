@@ -8,6 +8,8 @@ using namespace al;
 #include <vector>
 using namespace std;
 
+int partNum = 1000;
+
 Vec3f rv(float scale) {
   return Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()) * scale;
 } //assigns randomness in three dimensions, multiplies it by scale
@@ -28,7 +30,7 @@ struct AlloApp : App {
   vector<Vec3f> acceleration;
   vector<float> mass;
 
-  vector<Vec3f> gravity;
+  vector<vector<Vec3f>> gravity;
 
   void onCreate() override {
     // add more GUI here
@@ -47,13 +49,14 @@ struct AlloApp : App {
     auto rc = []() { return HSV(rnd::uniform(), 1.0f, 1.0f); }; //picking a random hue with high saturation and brightness
 
     mesh.primitive(Mesh::POINTS);
-    for (int r = 0; r < 1000; r++) { //create 1000 points, put it into mesh
+    for (int r = 0; r < partNum; r++) { //create 1000 points, put it into mesh
       mesh.vertex(rv(5));
       mesh.color(rc());
 
       //      float m = rnd::uniform(3.0, 0.5);
-      float m = 3 + rnd::normal() * 0.1; //calculate mass and set it -> gaussian distribution of masses
-      if (m < 0.5) m = 0.5; //clamp the mass -> no smaller than 0.5
+      float m = 1; // mass = 1
+      // float m = 3 + rnd::normal() * 0.1; //calculate mass and set it -> gaussian distribution of masses
+      // if (m < 0.5) m = 0.5; //clamp the mass -> no smaller than 0.5
       mass.push_back(m);
      
       //set texture coordinate to be the size of the point (related to the mass)
@@ -66,7 +69,14 @@ struct AlloApp : App {
       // separate state arrays
       velocity.push_back(rv(0.1)); //start with some small velocity
       acceleration.push_back(rv(0)); //start with no acceleration
-      gravity.push_back(0);
+    }
+
+    for (int i = 0; i < partNum; i++) {
+        vector<Vec3f> temp;
+        for (int j = 0; j < partNum; j++) {
+            temp.push_back(0);
+        }
+        gravity.push_back(temp);
     }
 
     nav().pos(0, 0, 10); //push camera back
@@ -83,19 +93,29 @@ struct AlloApp : App {
     // *********** Calculate forces ***********
 
     // gravity
-    float G = 1.0;
+    float G = 0.00000000006674; //gravitational constant
+    float clampVal = 0.5;
     for (int i = 0; i < 1000; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
       for (int j = 0; j < 1000; j++) {
         if (j!=i) { // don't calculate if it is the same particle
-          Vec3f distance(mesh.vertices()[i] - mesh.vertices()[j]);
-          Vec3f gravityVal = Vec3f(G, G, G) * mass[i] * mass[j] / distance;
+          Vec3f distance(mesh.vertices()[i] - mesh.vertices()[j]); //calculate distances between particles
+          Vec3f gravityVal = G * mass[i] * mass[j] / distance; // F = G * m1 * m2 / r^2
           //cout << gravityVal << endl;
-          gravity[i] = gravityVal; // this needs to be a 2D vector
-          // F = G * m1 * m2 / r^2
-        } else { gravity[i] = 0;}
-        
-        // put a limit on the forces (don't want anything too crazy or too small)
+          if (gravityVal.x >= clampVal) { //limit forces
+            cout << "x is greater than " << clampVal << endl;
+            gravityVal.x = clampVal;
+          } else if (gravityVal.y >= clampVal) {
+            cout << "y is greater than " << clampVal << endl;
+            gravityVal.y = clampVal;
+          } else if (gravityVal.z >= clampVal) {
+            cout << "z is greater than " << clampVal << endl;
+            gravityVal.z = clampVal;
+          } 
+          gravity[i][j] = gravityVal;
+        } else { gravity[i][j] = 0;}
+       acceleration[i] -= gravity[i][j]; //accumulate all the accelerations that the other particles are exerting on it due to gravity
       }
+      
     }
 
     // drag -> stabilizes simulation
@@ -110,7 +130,7 @@ struct AlloApp : App {
     vector<Vec3f>& position(mesh.vertices()); // reference (alias) to mesh.vertices()
     for (int i = 0; i < velocity.size(); i++) {
       // "backward" Euler integration (semi-implicit, more stable)
-      velocity[i] += acceleration[i] - gravity[i] / mass[i] * dt;
+      velocity[i] += acceleration[i] / mass[i] * dt;
       position[i] += velocity[i] * dt; // this is actually changing mesh.vertices() -> interchangeable
 
       // Explicit (or "forward") Euler integration would look like this:
