@@ -85,6 +85,17 @@ struct AlloApp : App {
   }
 
   bool freeze = false; //state that freezes simulation -> doesn't run onAnimate if frozen
+
+  float checkMag(float value) {
+    if (value > 5) {
+        cout << "recalc" << endl;
+        value /= 10;
+        checkMag(value);
+    } else {
+        return value;
+    }
+  }
+  
   void onAnimate(double dt) override {
     if (freeze) return;
 
@@ -95,23 +106,26 @@ struct AlloApp : App {
     // *********** Calculate forces ***********
 
     // gravity
-    float G = 6.674e-11; //gravitational constant
+    float G = 6.674; //gravitational constant
     for (int i = 0; i < partNum; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
       for (int j = 0; j < partNum; j++) {
         if (j!=i) {
           Vec3f distance(mesh.vertices()[i] - mesh.vertices()[j]); //calculate distances between particles
-          Vec3f gravityVal = G * mass[i] * mass[j] * 10e15/ (distance.mag() * distance.mag()); // F = G * m1 * m2 / r^2
+          Vec3f gravityVal = G * mass[i] * mass[j] / (distance.mag() * distance.mag()); // F = G * m1 * m2 / r^2
           //cout << gravityVal << endl;
           acceleration[i] += gravityVal;
-          acceleration[j] -= gravityVal/symmetry;
+          acceleration[j] -= (gravityVal*symmetry);
         }
       }
     }
+    
     for (int i = 0; i < partNum; i++) {
+        if (acceleration[i].mag() > 5) {
+            float newVal = checkMag(acceleration[i].mag());
+            acceleration[i] = Vec3f(newVal);
+        }
         cout << acceleration[i] << endl;
     }
-
-    
 
     if (keyOne == false) {
       for (int i = 0; i < partNum; i++) {
