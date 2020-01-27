@@ -8,7 +8,7 @@ using namespace al;
 #include <vector>
 using namespace std;
 
-int partNum = 1000;
+int partNum = 50;
 
 Vec3f rv(float scale) {
   return Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()) * scale;
@@ -96,20 +96,22 @@ struct AlloApp : App {
 
     // gravity
     float G = 6.674e-11; //gravitational constant
-    float clampVal = 0.8;
     for (int i = 0; i < partNum; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
       for (int j = 0; j < partNum; j++) {
         if (j!=i) {
           Vec3f distance(mesh.vertices()[i] - mesh.vertices()[j]); //calculate distances between particles
-          Vec3f gravityVal = G * mass[i] * mass[j] * 10e7/ (distance.mag() * distance.mag()); // F = G * m1 * m2 / r^2
+          Vec3f gravityVal = G * mass[i] * mass[j] * 10e15/ (distance.mag() * distance.mag()); // F = G * m1 * m2 / r^2
           //cout << gravityVal << endl;
           acceleration[i] += gravityVal;
-          acceleration[j] -= gravityVal*symmetry;
-          
-          //cout << acceleration[i] << " " << acceleration[j] << endl;
+          acceleration[j] -= gravityVal/symmetry;
         }
       }
     }
+    for (int i = 0; i < partNum; i++) {
+        cout << acceleration[i] << endl;
+    }
+
+    
 
     if (keyOne == false) {
       for (int i = 0; i < partNum; i++) {
