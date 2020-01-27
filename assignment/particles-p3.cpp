@@ -87,12 +87,17 @@ struct AlloApp : App {
   bool freeze = false; //state that freezes simulation -> doesn't run onAnimate if frozen
 
   float checkMag(float value) {
-    if (value > 5) {
-        cout << "recalc" << endl;
-        value /= 10;
-        checkMag(value);
+    cout << "check mag" << endl;
+    float v = 0.0;
+    if (value > 5.0) {
+        v = value/10;
+        cout << "recalc " << v << endl;
+        v = checkMag(v); //check recursively until it is in range
+        cout << "HERE : " << v << endl;
     } else {
-        return value;
+        v = value;
+        cout << "value " << v << endl;
+        return v; //return the final value
     }
   }
   
@@ -122,9 +127,10 @@ struct AlloApp : App {
     for (int i = 0; i < partNum; i++) {
         if (acceleration[i].mag() > 5) {
             float newVal = checkMag(acceleration[i].mag());
+            cout << i << " " << newVal << endl;
             acceleration[i] = Vec3f(newVal);
         }
-        cout << acceleration[i] << endl;
+        //cout << acceleration[i] << endl;
     }
 
     if (keyOne == false) {
