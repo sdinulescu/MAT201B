@@ -19,7 +19,6 @@ string slurp(string fileName); //forward declaration
 struct AlloApp : App {
   Parameter pointSize{"/pointSize", "", 1.0, "", 0.0, 2.0};
   Parameter timeStep{"/timeStep", "", 0.1, "", 0.1, 0.6}; //simplest way to not get NANs, keep timestep small
-  Parameter gravity{"/gravity", "", 1, "", 0, 5};
   //add GUI params here
   ControlGUI gui;
 
@@ -33,7 +32,7 @@ struct AlloApp : App {
 
   void onCreate() override {
     // add more GUI here
-    gui << pointSize << timeStep << gravity; //stream operator
+    gui << pointSize << timeStep; //stream operator
     gui.init();
     navControl().useMouse(false);
 
@@ -52,8 +51,18 @@ struct AlloApp : App {
       mesh.vertex(rv(5));
       mesh.color(rc());
 
+      float m = 1; // mass = 1 -> initialize
       //      float m = rnd::uniform(3.0, 0.5);
-      float m = 1; // mass = 1
+      if (r==0) { //
+        m = 1988500000e-5; //push the sun into the first array spot
+      } else if (r > 0 && r <= 9) {
+        m = rnd::uniform(1898200.0e-3, 330.1); //push the planets
+      } else if (r > 9 && r <= 50) {
+        m = rnd::uniform(148.2, 1.0); //push the moons
+      } else {
+        m = rnd::uniform(1.0, 0.1); //push everything else
+      }
+      
       // float m = 3 + rnd::normal() * 0.1; //calculate mass and set it -> gaussian distribution of masses
       // if (m < 0.5) m = 0.5; //clamp the mass -> no smaller than 0.5
       mass.push_back(m);
@@ -84,7 +93,7 @@ struct AlloApp : App {
     // *********** Calculate forces ***********
 
     // gravity
-    float G = gravity; //gravitational constant
+    float G = 6.674e-11; //gravitational constant
     float clampVal = 0.8;
     for (int i = 0; i < partNum; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
       for (int j = 0; j < partNum; j++) {
