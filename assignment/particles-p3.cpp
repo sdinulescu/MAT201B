@@ -19,6 +19,7 @@ string slurp(string fileName); //forward declaration
 struct AlloApp : App {
   Parameter pointSize{"/pointSize", "", 1.0, "", 0.0, 2.0};
   Parameter timeStep{"/timeStep", "", 0.1, "", 0.1, 0.6}; //simplest way to not get NANs, keep timestep small
+  Parameter symmetry{"/symmetry", "", 1, "", 0.1, 1}; 
   //add GUI params here
   ControlGUI gui;
 
@@ -32,7 +33,7 @@ struct AlloApp : App {
 
   void onCreate() override {
     // add more GUI here
-    gui << pointSize << timeStep; //stream operator
+    gui << pointSize << timeStep << symmetry; //stream operator
     gui.init();
     navControl().useMouse(false);
 
@@ -103,7 +104,7 @@ struct AlloApp : App {
           Vec3f gravityVal = G * mass[i] * mass[j] * 10e7/ (distance.mag() * distance.mag()); // F = G * m1 * m2 / r^2
           //cout << gravityVal << endl;
           acceleration[i] += gravityVal;
-          acceleration[j] -= gravityVal;
+          acceleration[j] -= gravityVal*symmetry;
           
           //cout << acceleration[i] << " " << acceleration[j] << endl;
         }

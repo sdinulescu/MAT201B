@@ -19,7 +19,7 @@ string slurp(string fileName); //forward declaration
 struct AlloApp : App {
   Parameter pointSize{"/pointSize", "", 1.0, "", 0.0, 2.0};
   Parameter timeStep{"/timeStep", "", 0.1, "", 0.1, 0.6}; //simplest way to not get NANs, keep timestep small
-  Parameter gravity{"/gravity", "", 1, "", 0, 5};
+  Parameter gravity{"/gravity", "", 1, "", 0, 100};
   //add GUI params here
   ControlGUI gui;
 
@@ -85,7 +85,7 @@ struct AlloApp : App {
 
     // gravity
     float G = gravity; //gravitational constant
-    float clampVal = 0.8;
+    //cout << G << endl;
     for (int i = 0; i < partNum; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
       for (int j = 0; j < partNum; j++) {
         if (j!=i) {
@@ -94,12 +94,16 @@ struct AlloApp : App {
           //cout << gravityVal << endl;
           acceleration[i] += gravityVal;
           acceleration[j] -= gravityVal;
-          
-          //cout << acceleration[i] << " " << acceleration[j] << endl;
         }
       }
     }
 
+    if (keyOne == false) {
+      for (int i = 0; i < partNum; i++) {
+        acceleration[i] *= 100;
+      }
+    } else { keyOne = false; }
+    
     // drag -> stabilizes simulation
     for (int i = 0; i < partNum; i++) {
       // force of drag is proportional to the opposite of velocity * small amount
@@ -107,6 +111,9 @@ struct AlloApp : App {
       // take a bit of acceleration away proportional to what the velocity is
       acceleration[i] -= velocity[i] * 0.07;
     }
+
+    
+    //cout << acceleration[0] << endl;
 
     // Integration -> don't mess with this
     vector<Vec3f>& position(mesh.vertices()); // reference (alias) to mesh.vertices()
@@ -124,12 +131,14 @@ struct AlloApp : App {
     for (auto& a : acceleration) a.zero();
   }
 
+  bool keyOne = false;
   bool onKeyDown(const Keyboard& k) override {
     if (k.key() == ' ') {
       freeze = !freeze;
     }
 
     if (k.key() == '1') {
+      keyOne = true;
       // introduce some "random" forces
       for (int i = 0; i < partNum; i++) {
         acceleration[i] = rv(1) / mass[i]; // rv gives a force -> divide by mass to get acceleration
