@@ -19,6 +19,9 @@ string slurp(string fileName); //forward declaration
 struct AlloApp : App {
   Parameter pointSize{"/pointSize", "", 1.0, "", 0.0, 2.0};
   Parameter timeStep{"/timeStep", "", 0.1, "", 0.1, 0.6}; //simplest way to not get NANs, keep timestep small
+  Parameter dragFactor{"/dragFactor", "", 0.07, "", 0, 1};
+  Parameter gravityBound{"/gravityBound", "", 0.08, "", 0, 1};
+  Parameter maxAccel{"/maxAccel", "", 0.1, "", 0, 10};
   Parameter symmetry{"/symmetry", "", 1, "", 0.5, 1}; 
   //add GUI params here
   ControlGUI gui;
@@ -31,9 +34,41 @@ struct AlloApp : App {
   vector<Vec3f> acceleration;
   vector<float> mass;
 
+  void reset() { //empty all containers
+    mesh.reset();
+    velocity.clear();
+    acceleration.clear();
+
+     // c++11 "lambda" function
+    auto rc = []() { return HSV(rnd::uniform(), 1.0f, 1.0f); }; //picking a random hue with high saturation and brightness
+
+    mesh.primitive(Mesh::POINTS);
+    for (int r = 0; r < partNum; r++) { //create 1000 points, put it into mesh
+      mesh.vertex(rv(5));
+      mesh.color(rc());
+
+      //      float m = rnd::uniform(3.0, 0.5);
+      float m = 1; // mass = 1
+      // float m = 3 + rnd::normal() * 0.1; //calculate mass and set it -> gaussian distribution of masses
+      // if (m < 0.5) m = 0.5; //clamp the mass -> no smaller than 0.5
+      mass.push_back(m);
+     
+      //set texture coordinate to be the size of the point (related to the mass)
+      //using a simplified volume size relationship -> V = 4/3 * pi * r^3
+                    //pow is power -> m^(1/3)
+      mesh.texCoord((4/3) * 3.14 * pow(m, 1.0f / 3), 0); 
+      //pass in an s, t (like x, y)-> where on an image do we want to grab the color from for this pixel (2D texture)
+      //normalized between 0 and 1
+
+      // separate state arrays
+      velocity.push_back(rv(0.1)); //start with some small velocity
+      acceleration.push_back(rv(0)); //start with no acceleration
+    }
+  }
+
   void onCreate() override {
     // add more GUI here
-    gui << pointSize << timeStep << symmetry; //stream operator
+    gui << pointSize << timeStep << dragFactor << gravityBound << maxAccel << symmetry; //stream operator
     gui.init();
     navControl().useMouse(false);
 
@@ -43,43 +78,7 @@ struct AlloApp : App {
                         slurp("../point-geometry.glsl"));
 
     // set initial conditions
-
-    // c++11 "lambda" function
-    auto rc = []() { return HSV(rnd::uniform(), 1.0f, 1.0f); }; //picking a random hue with high saturation and brightness
-
-    mesh.primitive(Mesh::POINTS);
-    for (int r = 0; r < partNum; r++) { //create 1000 points, put it into mesh
-      mesh.vertex(rv(5));
-      mesh.color(rc());
-
-      float m = 1; // mass = 1 -> initialize
-      //      float m = rnd::uniform(3.0, 0.5);
-      if (r==0) { //
-        m = 1988.5; //push the sun into the first array spot
-      } else if (r > 0 && r <= 9) {
-        m = rnd::uniform(1898.2, 330.1); //push the planets
-      } else if (r > 9 && r <= 50) {
-        m = rnd::uniform(148.2, 1.0); //push the moons
-      } else {
-        m = rnd::uniform(1.0, 0.1); //push everything else
-      }
-      
-      // float m = 3 + rnd::normal() * 0.1; //calculate mass and set it -> gaussian distribution of masses
-      // if (m < 0.5) m = 0.5; //clamp the mass -> no smaller than 0.5
-      mass.push_back(m);
-     
-      //set texture coordinate to be the size of the point (related to the mass)
-      //using a simplified volume size relationship -> V = 4/3 * pi * r^3
-                    //pow is power -> m^(1/3)
-      float size = (4/3) * 3.14 * pow(m, 1.0f / 3);
-      mesh.texCoord(size, 0); 
-      //pass in an s, t (like x, y)-> where on an image do we want to grab the color from for this pixel (2D texture)
-      //normalized between 0 and 1
-
-      // separate state arrays
-      velocity.push_back(rv(0.1)); //start with some small velocity
-      acceleration.push_back(rv(0)); //start with no acceleration
-    }
+    reset();
 
     nav().pos(0, 0, 10); //push camera back
   }
@@ -98,10 +97,9 @@ struct AlloApp : App {
     // gravity
     float G = 6.674; //gravitational constant
     //float accClamp = 0.1;
-    float gravityBound = 0.1;
     for (int i = 0; i < partNum; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
         for (int j = 1+i; j < partNum; j++) {
-            Vec3f distance(mesh.vertices()[i] - mesh.vertices()[j]); //calculate distances between particles
+            Vec3f distance(mesh.vertices()[j] - mesh.vertices()[i]); //calculate distances between particles
             Vec3f gravityVal = G * mass[i] * mass[j] * distance.normalize() / pow(distance.mag(), 2); // F = G * m1 * m2 / r^2
             if (gravityVal.mag() > gravityBound) {
                 gravityVal.normalize(gravityBound);
@@ -115,33 +113,20 @@ struct AlloApp : App {
         }
     }
     
-    //limit accelerations
-    // for (int i = 0; i < partNum; i++) {
-    //     if (acceleration[i].mag() > accClamp) {
-    //         //cout << "adjust " << i << endl;
-    //         acceleration[i].normalize(acceleration[i].mag()/10);
-    //     }
-    //     if (acceleration[i].mag() < -accClamp) {
-    //         //cout << "adjust " << i << endl;
-    //         acceleration[i].normalize(-acceleration[i].mag()/10);
-    //     }
-    //      cout << acceleration[i] << endl;
-    // }
-
-    if (keyOne == false) {
-      for (int i = 0; i < partNum; i++) {
-        acceleration[i] *= 100;
+    //limit acceleration
+    for (int i = 0; i < partNum; i++) {
+      float m = acceleration[i].mag();
+      if (m > maxAccel) {
+        acceleration[i].normalize(maxAccel);
       }
-    } else { keyOne = false; }
-
-    //cout << acceleration[0] << endl;
+    }
 
     // drag -> stabilizes simulation
     for (int i = 0; i < partNum; i++) {
       // force of drag is proportional to the opposite of velocity * small amount
       // normally, it is v^2 -> can change the statement to vector[i].mag() * velocity[i] * 0.07;
       // take a bit of acceleration away proportional to what the velocity is
-      acceleration[i] -= velocity[i] * 0.07;
+      acceleration[i] -= velocity[i] * dragFactor;
     }
 
     // Integration -> don't mess with this
@@ -160,8 +145,6 @@ struct AlloApp : App {
     for (auto& a : acceleration) a.zero();
   }
 
-  bool keyOne = false;
-
   bool onKeyDown(const Keyboard& k) override {
     if (k.key() == ' ') {
       freeze = !freeze;
@@ -169,11 +152,14 @@ struct AlloApp : App {
 
     if (k.key() == '1') {
       // introduce some "random" forces
-      keyOne = true;
       for (int i = 0; i < partNum; i++) {
         acceleration[i] = rv(1) / mass[i]; // rv gives a force -> divide by mass to get acceleration
         //cout << acceleration[i] << endl;
       }
+    }
+
+    if (k.key() == 'r') {
+        reset();
     }
 
     return true;
