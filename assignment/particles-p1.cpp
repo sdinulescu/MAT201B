@@ -18,8 +18,8 @@ string slurp(string fileName); //forward declaration
 
 struct AlloApp : App {
   Parameter pointSize{"/pointSize", "", 1.0, "", 0.0, 2.0};
-  Parameter timeStep{"/timeStep", "", 0.1, "", 0.1, 0.6}; //simplest way to not get NANs, keep timestep small
-  Parameter gravity{"/gravity", "", 1, "", 0, 10};
+  Parameter timeStep{"/timeStep", "", 0.01, "", 0.01, 0.6}; //simplest way to not get NANs, keep timestep small
+  Parameter gravity{"/gravity", "", 0.2, "", 0, 10};
   //add GUI params here
   ControlGUI gui;
 
@@ -85,12 +85,19 @@ struct AlloApp : App {
 
     // gravity
     float G = gravity; //gravitational constant
+    float gravityBound = 0.8;
     //cout << G << endl;
     for (int i = 0; i < partNum; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
       for (int j = 1+i; j < partNum; j++) {
           Vec3f distance(mesh.vertices()[j] - mesh.vertices()[i]); //calculate distances between particles
           Vec3f gravityVal = G * mass[i] * mass[j] * distance.normalize() / pow(distance.mag(), 2); // F = G * m1 * m2 / r^2
           //cout << gravityVal << endl;
+          if (gravityVal.mag() > gravityBound) {
+            gravityVal.normalize(gravityVal.mag()/10);
+          }
+          if (gravityVal.mag() < -gravityBound) {
+            gravityVal.normalize(-gravityVal.mag()/10);
+          }
           acceleration[i] += gravityVal/mass[i];
           acceleration[j] -= gravityVal/mass[j];
       }

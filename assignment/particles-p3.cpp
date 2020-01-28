@@ -97,33 +97,36 @@ struct AlloApp : App {
 
     // gravity
     float G = 6.674; //gravitational constant
-    float accClamp = 0.1;
-    float lowGravityBound = 0.0001;
-    float highGravityBound = 0.01;
+    //float accClamp = 0.1;
+    float gravityBound = 0.1;
     for (int i = 0; i < partNum; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
         for (int j = 1+i; j < partNum; j++) {
             Vec3f distance(mesh.vertices()[i] - mesh.vertices()[j]); //calculate distances between particles
             Vec3f gravityVal = G * mass[i] * mass[j] * distance.normalize() / pow(distance.mag(), 2); // F = G * m1 * m2 / r^2
-            if (gravityVal.mag() > highGravityBound) {
-                gravityVal.normalize(highGravityBound);
+            if (gravityVal.mag() > gravityBound) {
+                gravityVal.normalize(gravityBound);
             }
-            if (gravityVal.mag() < lowGravityBound) {
-                gravityVal.normalize(lowGravityBound);
+            if (gravityVal.mag() < -gravityBound) {
+                gravityVal.normalize(-gravityBound);
             }
             //cout << gravityVal << endl;
-            acceleration[i] += gravityVal;
-            acceleration[j] -= gravityVal*symmetry;
+            acceleration[i] += gravityVal/mass[i];
+            acceleration[j] -= gravityVal*symmetry/mass[j];
         }
     }
     
     //limit accelerations
-    for (int i = 0; i < partNum; i++) {
-        if (acceleration[i].mag() > accClamp) {
-            //cout << "adjust " << i << endl;
-            acceleration[i].normalize(accClamp);
-        }
-        cout << acceleration[i] << endl;
-    }
+    // for (int i = 0; i < partNum; i++) {
+    //     if (acceleration[i].mag() > accClamp) {
+    //         //cout << "adjust " << i << endl;
+    //         acceleration[i].normalize(acceleration[i].mag()/10);
+    //     }
+    //     if (acceleration[i].mag() < -accClamp) {
+    //         //cout << "adjust " << i << endl;
+    //         acceleration[i].normalize(-acceleration[i].mag()/10);
+    //     }
+    //      cout << acceleration[i] << endl;
+    // }
 
     if (keyOne == false) {
       for (int i = 0; i < partNum; i++) {
