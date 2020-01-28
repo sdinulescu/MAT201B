@@ -8,7 +8,7 @@ using namespace al;
 #include <vector>
 using namespace std;
 
-int partNum = 50;
+int partNum = 1000;
 
 Vec3f rv(float scale) {
   return Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()) * scale;
@@ -19,7 +19,7 @@ string slurp(string fileName); //forward declaration
 struct AlloApp : App {
   Parameter pointSize{"/pointSize", "", 1.0, "", 0.0, 2.0};
   Parameter timeStep{"/timeStep", "", 0.1, "", 0.1, 0.6}; //simplest way to not get NANs, keep timestep small
-  Parameter symmetry{"/symmetry", "", 1, "", 0.1, 1}; 
+  Parameter symmetry{"/symmetry", "", 1, "", 0.5, 1}; 
   //add GUI params here
   ControlGUI gui;
 
@@ -85,21 +85,6 @@ struct AlloApp : App {
   }
 
   bool freeze = false; //state that freezes simulation -> doesn't run onAnimate if frozen
-
-  float checkMag(float value) {
-    cout << "check mag" << endl;
-    float v = 0.0;
-    if (value > 5.0) {
-        v = value/10;
-        cout << "recalc " << v << endl;
-        v = checkMag(v); //check recursively until it is in range
-        cout << "HERE : " << v << endl;
-    } else {
-        v = value;
-        cout << "value " << v << endl;
-        return v; //return the final value
-    }
-  }
   
   void onAnimate(double dt) override {
     if (freeze) return;
@@ -112,25 +97,34 @@ struct AlloApp : App {
 
     // gravity
     float G = 6.674; //gravitational constant
+    float accClamp = 0.1;
+    float lowGravityBound = 0.0001;
+    float highGravityBound = 0.01;
     for (int i = 0; i < partNum; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
       for (int j = 0; j < partNum; j++) {
         if (j!=i) {
           Vec3f distance(mesh.vertices()[i] - mesh.vertices()[j]); //calculate distances between particles
           Vec3f gravityVal = G * mass[i] * mass[j] / (distance.mag() * distance.mag()); // F = G * m1 * m2 / r^2
+          if (gravityVal.mag() > highGravityBound) {
+              gravityVal.normalize(highGravityBound);
+          }
+          if (gravityVal.mag() < lowGravityBound) {
+              gravityVal.normalize(lowGravityBound);
+          }
           //cout << gravityVal << endl;
           acceleration[i] += gravityVal;
-          acceleration[j] -= (gravityVal*symmetry);
+          acceleration[j] -= gravityVal*symmetry;
         }
       }
     }
     
+    //limit accelerations
     for (int i = 0; i < partNum; i++) {
-        if (acceleration[i].mag() > 5) {
-            float newVal = checkMag(acceleration[i].mag());
-            cout << i << " " << newVal << endl;
-            acceleration[i] = Vec3f(newVal);
+        if (acceleration[i].mag() > accClamp) {
+            //cout << "adjust " << i << endl;
+            acceleration[i].normalize(accClamp);
         }
-        //cout << acceleration[i] << endl;
+        cout << acceleration[i] << endl;
     }
 
     if (keyOne == false) {
