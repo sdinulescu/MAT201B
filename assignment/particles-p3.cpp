@@ -101,21 +101,19 @@ struct AlloApp : App {
     float lowGravityBound = 0.0001;
     float highGravityBound = 0.01;
     for (int i = 0; i < partNum; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
-      for (int j = 0; j < partNum; j++) {
-        if (j!=i) {
-          Vec3f distance(mesh.vertices()[i] - mesh.vertices()[j]); //calculate distances between particles
-          Vec3f gravityVal = G * mass[i] * mass[j] / (distance.mag() * distance.mag()); // F = G * m1 * m2 / r^2
-          if (gravityVal.mag() > highGravityBound) {
-              gravityVal.normalize(highGravityBound);
-          }
-          if (gravityVal.mag() < lowGravityBound) {
-              gravityVal.normalize(lowGravityBound);
-          }
-          //cout << gravityVal << endl;
-          acceleration[i] += gravityVal;
-          acceleration[j] -= gravityVal*symmetry;
+        for (int j = 1+i; j < partNum; j++) {
+            Vec3f distance(mesh.vertices()[i] - mesh.vertices()[j]); //calculate distances between particles
+            Vec3f gravityVal = G * mass[i] * mass[j] * distance.normalize() / pow(distance.mag(), 2); // F = G * m1 * m2 / r^2
+            if (gravityVal.mag() > highGravityBound) {
+                gravityVal.normalize(highGravityBound);
+            }
+            if (gravityVal.mag() < lowGravityBound) {
+                gravityVal.normalize(lowGravityBound);
+            }
+            //cout << gravityVal << endl;
+            acceleration[i] += gravityVal;
+            acceleration[j] -= gravityVal*symmetry;
         }
-      }
     }
     
     //limit accelerations

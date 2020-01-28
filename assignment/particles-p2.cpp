@@ -94,34 +94,24 @@ struct AlloApp : App {
     // *********** Calculate forces ***********
 
     // gravity
-    float G = 6.674; //gravitational constant
+    float G = 6.674e-11; //gravitational constant
     for (int i = 0; i < partNum; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
-      for (int j = 0; j < partNum; j++) {
-        if (j!=i) {
-          Vec3f distance(mesh.vertices()[i] - mesh.vertices()[j]); //calculate distances between particles
-          Vec3f gravityVal = G * mass[i] * mass[j]/ (distance.mag() * distance.mag()); // F = G * m1 * m2 / r^2
-          //here, adjust gravityVal (otherwise it is way too small)
-          //gravityVal *= 10e11;
+      for (int j = 1+i; j < partNum; j++) {
+          Vec3f distance(mesh.vertices()[j] - mesh.vertices()[i]); //calculate distances between particles -> b-a = c
+          Vec3f gravityVal = G * mass[i] * mass[j] * distance.normalize() / pow(distance.mag(), 2); // F = G * m1 * m2 / r^2
+          //multiply by r hat -> only direction, normalized magnitude
+          
           //cout << gravityVal << endl;
-          acceleration[i] += gravityVal;
-          acceleration[j] -= gravityVal;
+          acceleration[i] += gravityVal/mass[i];
+          acceleration[j] -= gravityVal/mass[j];
           
           //cout << acceleration[i] << " " << acceleration[j] << endl;
-        }
       }
     }
 
     // for (int i = 0; i < partNum; i++) {
     //     cout << acceleration[i] << endl;
     // }
-
-    if (keyOne == false) {
-      for (int i = 0; i < partNum; i++) {
-        acceleration[i] *= 100;
-      }
-    } else { keyOne = false; }
-
-    //cout << acceleration[0] << endl;
 
     // drag -> stabilizes simulation
     for (int i = 0; i < partNum; i++) {
@@ -147,8 +137,6 @@ struct AlloApp : App {
     for (auto& a : acceleration) a.zero();
   }
 
-  bool keyOne = false;
-
   bool onKeyDown(const Keyboard& k) override {
     if (k.key() == ' ') {
       freeze = !freeze;
@@ -156,7 +144,6 @@ struct AlloApp : App {
 
     if (k.key() == '1') {
       // introduce some "random" forces
-      keyOne = true;
       for (int i = 0; i < partNum; i++) {
         acceleration[i] = rv(1) / mass[i]; // rv gives a force -> divide by mass to get acceleration
         //cout << acceleration[i] << endl;
