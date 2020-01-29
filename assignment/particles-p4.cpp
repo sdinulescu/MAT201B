@@ -18,11 +18,12 @@ string slurp(string fileName); //forward declaration
 
 struct AlloApp : App {
   Parameter pointSize{"/pointSize", "", 1.0, "", 0.0, 2.0};
-  Parameter timeStep{"/timeStep", "", 0.01, "", 0.01, 0.6}; //simplest way to not get NANs, keep timestep small
-  Parameter gravConst{"/gravConst", "", 0.2, "", 0, 10};
-  Parameter dragFactor{"/dragFactor", "", 0.1, "", 0.01, 0.99};
-  Parameter gravityBound{"/gravityBound", "", 0.8, "", 0.01, 0.99};
-  Parameter maxAccel{"/maxAccel", "", 0.1, "", 0.01, 0.99};
+  Parameter timeStep{"/timeStep", "", 0.03, "", 0.01, 0.6}; //simplest way to not get NANs, keep timestep small
+  Parameter gravConst{"/gravConst", "", 0.7, "", 0, 1};
+  Parameter dragFactor{"/dragFactor", "", 0.07, "", 0.01, 0.99};
+  //Parameter gravityBound{"/gravityBound", "", 0.8, "", 0.01, 0.99};
+  Parameter maxAccel{"/maxAccel", "", 20, "", 0, 10};
+  Parameter scaleVal{"/scaleVal", "", 0.8, "", 0, 2};
   //add GUI params here
   ControlGUI gui;
 
@@ -40,22 +41,20 @@ struct AlloApp : App {
     acceleration.clear();
 
      // c++11 "lambda" function
-    auto rc = []() { return HSV(rnd::uniform(), 1.0f, 1.0f); }; //picking a random hue with high saturation and brightness
+     // seed random number generators to maintain determinism
+    rnd::Random<> rng;
+    rng.seed(42);
+    auto rc = [&]() { return HSV(rng.uniform(), 1.0f, 1.0f); };
+    auto rv = [&](float scale) -> Vec3f {
+      return Vec3f(rng.uniformS(), rng.uniformS(), rng.uniformS()) * scale;
+    };
 
     mesh.primitive(Mesh::POINTS);
     for (int r = 0; r < partNum; r++) { //create 1000 points, put it into mesh
       mesh.vertex(rv(5));
       mesh.color(rc());
 
-      if (r==0) { //
-         m = 1988500000; //push the sun into the first array spot
-       } else if (r > 0 && r <= 9) {
-         m = rnd::uniform(1898200.0, 330.1); //push the planets
-       } else if (r > 9 && r <= 50) {
-         m = rnd::uniform(148.2, 1.0); //push the moons
-       } else {
-         m = rnd::uniform(1.0, 0.1); //push everything else
-       }
+      float m = 1; // mass = 1
       mass.push_back(m);
      
       //set texture coordinate to be the size of the point (related to the mass)
@@ -76,7 +75,7 @@ struct AlloApp : App {
 
   void onCreate() override {
     // add more GUI here
-    gui << pointSize << timeStep << gravConst << dragFactor << gravityBound << maxAccel; //stream operator
+    gui << pointSize << timeStep << gravConst << dragFactor << maxAccel << scaleVal; //stream operator
     gui.init();
     navControl().useMouse(false);
 
@@ -89,7 +88,7 @@ struct AlloApp : App {
 
     reset();
 
-    nav().pos(0, 0, 10); //push camera back
+    nav().pos(0, 0, 20); //push camera back
   }
 
   bool freeze = false; //state that freezes simulation -> doesn't run onAnimate if frozen
@@ -104,18 +103,19 @@ struct AlloApp : App {
 
     // gravity
     for (int i = 0; i < partNum; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
-      for (int j = 1+i; j < partNum; j++) {
-          Vec3f distance(mesh.vertices()[j] - mesh.vertices()[i]); //calculate distances between particles
-          Vec3f gravityVal = gravConst * mass[i] * mass[j] * distance.normalize() / pow(distance.mag(), 2); // F = G * m1 * m2 / r^2
-          //cout << gravityVal << endl;
-          if (gravityVal.mag() > gravityBound) {
-            gravityVal.normalize(gravityVal.mag()/10);
-          }
-          if (gravityVal.mag() < -gravityBound) {
-            gravityVal.normalize(-gravityVal.mag()/10);
-          }
-          acceleration[i] += gravityVal/mass[i];
-          acceleration[j] -= gravityVal/mass[j];
+        for (int j = 1+i; j < partNum; j++) {
+
+            rnd::Random<> rng;
+            auto rv = [&](float scale) -> Vec3f {
+            return Vec3f(rng.uniformS(), rng.uniformS(), rng.uniformS()) * scale;
+            };
+
+            Vec3f distance(mesh.vertices()[j] - mesh.vertices()[i]); //calculate distances between particles
+            Vec3f gravityVal = gravConst * mass[i] * mass[j] * distance.normalize() / pow(distance.mag(), 2); // F = G * m1 * m2 / r^2
+
+            //using a random multiplier here in order to show a more naturalistic, "swimming" motion of the particles
+            acceleration[i] += gravityVal * rv(scaleVal)/mass[i];
+            acceleration[j] -= gravityVal * rv(scaleVal)/mass[j];
       }
     }
 
@@ -130,15 +130,14 @@ struct AlloApp : App {
 
 
     //limit acceleration
-    for (int i = 0; i < partNum; i++) {
+    for (int i = 0; i < acceleration.size(); i++) {
       float m = acceleration[i].mag();
       if (m > maxAccel) {
         acceleration[i].normalize(maxAccel);
+        cout << "Limiting Acceleration: " << m << " -> " << (float)maxAccel
+             << endl;
       }
     }
-
-    
-    //cout << acceleration[0] << endl;
 
     // Integration -> don't mess with this
     vector<Vec3f>& position(mesh.vertices()); // reference (alias) to mesh.vertices()
