@@ -18,11 +18,11 @@ string slurp(string fileName); //forward declaration
 
 struct AlloApp : App {
   Parameter pointSize{"/pointSize", "", 1.0, "", 0.0, 2.0};
-  Parameter timeStep{"/timeStep", "", 0.1, "", 0.1, 0.6}; //simplest way to not get NANs, keep timestep small
-  Parameter dragFactor{"/dragFactor", "", 0.07, "", 0, 1};
-  Parameter gravityBound{"/gravityBound", "", 0.08, "", 0, 1};
-  Parameter maxAccel{"/maxAccel", "", 0.1, "", 0, 10};
-  Parameter symmetry{"/symmetry", "", 1, "", 0.5, 1}; 
+  Parameter timeStep{"/timeStep", "", 0.03, "", 0.01, 0.6}; //simplest way to not get NANs, keep timestep small
+  Parameter gravConst{"/gravConst", "", 0.002, "", 0, 1};
+  Parameter dragFactor{"/dragFactor", "", 0.07, "", 0.01, 0.99};
+  Parameter maxAccel{"/maxAccel", "", 30, "", 0, 100};
+  Parameter symmetry{"/symmetry", "", 1, "", 0, 1};
   //add GUI params here
   ControlGUI gui;
 
@@ -39,22 +39,29 @@ struct AlloApp : App {
     velocity.clear();
     acceleration.clear();
 
-     // c++11 "lambda" function
-    auto rc = []() { return HSV(rnd::uniform(), 1.0f, 1.0f); }; //picking a random hue with high saturation and brightness
+    // c++11 "lambda" function
+    // seed random number generators to maintain determinism
+    rnd::Random<> rng;
+    rng.seed(42);
+    auto rc = [&]() { return HSV(rng.uniform(), 1.0f, 1.0f); };
+    auto rv = [&](float scale) -> Vec3f {
+      return Vec3f(rng.uniformS(), rng.uniformS(), rng.uniformS()) * scale;
+    };
 
     mesh.primitive(Mesh::POINTS);
     for (int r = 0; r < partNum; r++) { //create 1000 points, put it into mesh
       mesh.vertex(rv(5));
       mesh.color(rc());
 
+      float m = 1;
       if (r==0) { //
-         m = 1988500000; //push the sun into the first array spot
+         m = 19885.0; //push the sun into the first array spot
        } else if (r > 0 && r <= 9) {
-         m = rnd::uniform(1898200.0, 330.1); //push the planets
+         m = rnd::uniform(10000.0, 3300.1); //push the planets
        } else if (r > 9 && r <= 50) {
-         m = rnd::uniform(148.2, 1.0); //push the moons
+         m = rnd::uniform(330.1, 100.0); //push the moons
        } else {
-         m = rnd::uniform(1.0, 0.1); //push everything else
+         m = rnd::uniform(10.0, 0.1); //push everything else
        }
       mass.push_back(m);
      
@@ -73,7 +80,7 @@ struct AlloApp : App {
 
   void onCreate() override {
     // add more GUI here
-    gui << pointSize << timeStep << dragFactor << gravityBound << maxAccel << symmetry; //stream operator
+    gui << pointSize << timeStep << dragFactor << maxAccel << symmetry; //stream operator
     gui.init();
     navControl().useMouse(false);
 
@@ -84,12 +91,10 @@ struct AlloApp : App {
 
     // set initial conditions
     reset();
-
-    nav().pos(0, 0, 10); //push camera back
+    nav().pos(-1, -1, 20); //push camera back
   }
 
   bool freeze = false; //state that freezes simulation -> doesn't run onAnimate if frozen
-  
   void onAnimate(double dt) override {
     if (freeze) return;
 
@@ -100,29 +105,25 @@ struct AlloApp : App {
     // *********** Calculate forces ***********
 
     // gravity
-    float G = 6.674; //gravitational constant
-    //float accClamp = 0.1;
+    float G = 6.674e-4; //gravitational constant
     for (int i = 0; i < partNum; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
-        for (int j = 1+i; j < partNum; j++) {
-            Vec3f distance(mesh.vertices()[j] - mesh.vertices()[i]); //calculate distances between particles
-            Vec3f gravityVal = G * mass[i] * mass[j] * distance.normalize() / pow(distance.mag(), 2); // F = G * m1 * m2 / r^2
-            if (gravityVal.mag() > gravityBound) {
-                gravityVal.normalize(gravityBound);
-            }
-            if (gravityVal.mag() < -gravityBound) {
-                gravityVal.normalize(-gravityBound);
-            }
-            //cout << gravityVal << endl;
-            acceleration[i] += gravityVal/mass[i];
-            acceleration[j] -= gravityVal*symmetry/mass[j];
-        }
+      for (int j = 1+i; j < partNum; j++) {
+          Vec3f distance(mesh.vertices()[j] - mesh.vertices()[i]); //calculate distances between particles -> b-a = c
+          Vec3f gravityVal = G * mass[i] * mass[j] * distance.normalize() / pow(distance.mag(), 2); // F = G * m1 * m2 / r^2
+          //multiply by r hat -> only direction, normalized magnitude
+
+          acceleration[i] += gravityVal/mass[i];
+          acceleration[j] -= gravityVal * symmetry/mass[j];
+      }
     }
-    
+
     //limit acceleration
-    for (int i = 0; i < partNum; i++) {
+    for (int i = 0; i < acceleration.size(); i++) {
       float m = acceleration[i].mag();
       if (m > maxAccel) {
         acceleration[i].normalize(maxAccel);
+        cout << "Limiting Acceleration: " << m << " -> " << (float)maxAccel
+             << endl;
       }
     }
 
@@ -163,7 +164,7 @@ struct AlloApp : App {
       }
     }
 
-    if (k.key() == 'r') {
+     if (k.key() == 'r') {
         reset();
     }
 
