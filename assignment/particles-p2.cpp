@@ -18,10 +18,10 @@ string slurp(string fileName); //forward declaration
 
 struct AlloApp : App {
   Parameter pointSize{"/pointSize", "", 1.0, "", 0.0, 2.0};
-  Parameter timeStep{"/timeStep", "", 0.02, "", 0.01, 0.6}; //simplest way to not get NANs, keep timestep small
+  Parameter timeStep{"/timeStep", "", 0.03, "", 0.01, 0.6}; //simplest way to not get NANs, keep timestep small
   Parameter gravConst{"/gravConst", "", 0.002, "", 0, 1};
   Parameter dragFactor{"/dragFactor", "", 0.07, "", 0.01, 0.99};
-  Parameter maxAccel{"/maxAccel", "", 20, "", 0, 10};
+  Parameter maxAccel{"/maxAccel", "", 30, "", 0, 100};
   //add GUI params here
   ControlGUI gui;
 
@@ -52,10 +52,16 @@ struct AlloApp : App {
       mesh.vertex(rv(5));
       mesh.color(rc());
 
-      //      float m = rnd::uniform(3.0, 0.5);
-      float m = 1; // mass = 1
-      // float m = 3 + rnd::normal() * 0.1; //calculate mass and set it -> gaussian distribution of masses
-      // if (m < 0.5) m = 0.5; //clamp the mass -> no smaller than 0.5
+      float m = 1;
+      if (r==0) { //
+         m = 19885.0; //push the sun into the first array spot
+       } else if (r > 0 && r <= 9) {
+         m = rnd::uniform(10000.0, 3300.1); //push the planets
+       } else if (r > 9 && r <= 50) {
+         m = rnd::uniform(330.1, 100.0); //push the moons
+       } else {
+         m = rnd::uniform(10.0, 0.1); //push everything else
+       }
       mass.push_back(m);
      
       //set texture coordinate to be the size of the point (related to the mass)
@@ -84,8 +90,7 @@ struct AlloApp : App {
 
     // set initial conditions
     reset();
-
-    nav().pos(0, 0, 10); //push camera back
+    nav().pos(-1, -1, 20); //push camera back
   }
 
   bool freeze = false; //state that freezes simulation -> doesn't run onAnimate if frozen
@@ -99,27 +104,15 @@ struct AlloApp : App {
     // *********** Calculate forces ***********
 
     // gravity
-    float G = 6.674e-11; //gravitational constant
+    float G = 6.674e-4; //gravitational constant
     for (int i = 0; i < partNum; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
       for (int j = 1+i; j < partNum; j++) {
           Vec3f distance(mesh.vertices()[j] - mesh.vertices()[i]); //calculate distances between particles -> b-a = c
           Vec3f gravityVal = G * mass[i] * mass[j] * distance.normalize() / pow(distance.mag(), 2); // F = G * m1 * m2 / r^2
           //multiply by r hat -> only direction, normalized magnitude
 
-          //cout << gravityVal << endl;
-
-          // if (gravityVal.mag() > gravityBound) {
-          //   gravityVal.normalize(gravityBound);
-          // }
-          // if (gravityVal.mag() < -gravityBound) {
-          //   gravityVal.normalize(-gravityBound);
-          // }
-          
-          cout << gravityVal << endl;
           acceleration[i] += gravityVal/mass[i];
           acceleration[j] -= gravityVal/mass[j];
-          
-          //cout << acceleration[i] << " " << acceleration[j] << endl;
       }
     }
 
