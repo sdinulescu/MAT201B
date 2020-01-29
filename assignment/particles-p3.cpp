@@ -47,10 +47,15 @@ struct AlloApp : App {
       mesh.vertex(rv(5));
       mesh.color(rc());
 
-      //      float m = rnd::uniform(3.0, 0.5);
-      float m = 1; // mass = 1
-      // float m = 3 + rnd::normal() * 0.1; //calculate mass and set it -> gaussian distribution of masses
-      // if (m < 0.5) m = 0.5; //clamp the mass -> no smaller than 0.5
+      if (r==0) { //
+         m = 1988500000; //push the sun into the first array spot
+       } else if (r > 0 && r <= 9) {
+         m = rnd::uniform(1898200.0, 330.1); //push the planets
+       } else if (r > 9 && r <= 50) {
+         m = rnd::uniform(148.2, 1.0); //push the moons
+       } else {
+         m = rnd::uniform(1.0, 0.1); //push everything else
+       }
       mass.push_back(m);
      
       //set texture coordinate to be the size of the point (related to the mass)

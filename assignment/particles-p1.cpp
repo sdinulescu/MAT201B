@@ -21,7 +21,7 @@ struct AlloApp : App {
   Parameter timeStep{"/timeStep", "", 0.02, "", 0.01, 0.6}; //simplest way to not get NANs, keep timestep small
   Parameter gravConst{"/gravConst", "", 0.002, "", 0, 1};
   Parameter dragFactor{"/dragFactor", "", 0.07, "", 0.01, 0.99};
-  Parameter gravityBound{"/gravityBound", "", 0.8, "", 0.01, 0.99};
+  //Parameter gravityBound{"/gravityBound", "", 0.8, "", 0.01, 0.99};
   Parameter maxAccel{"/maxAccel", "", 20, "", 0, 10};
   Parameter seedVal{"/seedVal", "", 42, "", 0, 100};
   //add GUI params here
@@ -54,10 +54,7 @@ struct AlloApp : App {
       mesh.vertex(rv(5));
       mesh.color(rc());
 
-      //      float m = rnd::uniform(3.0, 0.5);
       float m = 1; // mass = 1
-      // float m = 3 + rnd::normal() * 0.1; //calculate mass and set it -> gaussian distribution of masses
-      // if (m < 0.5) m = 0.5; //clamp the mass -> no smaller than 0.5
       mass.push_back(m);
      
       //set texture coordinate to be the size of the point (related to the mass)
@@ -140,9 +137,6 @@ struct AlloApp : App {
              << endl;
       }
     }
-
-    
-    //cout << acceleration[0] << endl;
 
     // Integration -> don't mess with this
     vector<Vec3f>& position(mesh.vertices()); // reference (alias) to mesh.vertices()
