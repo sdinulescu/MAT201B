@@ -18,11 +18,12 @@ string slurp(string fileName); //forward declaration
 
 struct AlloApp : App {
   Parameter pointSize{"/pointSize", "", 1.0, "", 0.0, 2.0};
-  Parameter timeStep{"/timeStep", "", 0.01, "", 0.01, 0.6}; //simplest way to not get NANs, keep timestep small
-  Parameter gravConst{"/gravConst", "", 0.2, "", 0, 10};
-  Parameter dragFactor{"/dragFactor", "", 0.1, "", 0.01, 0.99};
+  Parameter timeStep{"/timeStep", "", 0.02, "", 0.01, 0.6}; //simplest way to not get NANs, keep timestep small
+  Parameter gravConst{"/gravConst", "", 0.002, "", 0, 1};
+  Parameter dragFactor{"/dragFactor", "", 0.07, "", 0.01, 0.99};
   Parameter gravityBound{"/gravityBound", "", 0.8, "", 0.01, 0.99};
-  Parameter maxAccel{"/maxAccel", "", 0.1, "", 0.01, 0.99};
+  Parameter maxAccel{"/maxAccel", "", 20, "", 0, 10};
+  Parameter seedVal{"/seedVal", "", 42, "", 0, 100};
   //add GUI params here
   ControlGUI gui;
 
@@ -40,7 +41,13 @@ struct AlloApp : App {
     acceleration.clear();
 
      // c++11 "lambda" function
-    auto rc = []() { return HSV(rnd::uniform(), 1.0f, 1.0f); }; //picking a random hue with high saturation and brightness
+     // seed random number generators to maintain determinism
+    rnd::Random<> rng;
+    rng.seed(seedVal);
+    auto rc = [&]() { return HSV(rng.uniform(), 1.0f, 1.0f); };
+    auto rv = [&](float scale) -> Vec3f {
+      return Vec3f(rng.uniformS(), rng.uniformS(), rng.uniformS()) * scale;
+    };
 
     mesh.primitive(Mesh::POINTS);
     for (int r = 0; r < partNum; r++) { //create 1000 points, put it into mesh
@@ -71,7 +78,7 @@ struct AlloApp : App {
 
   void onCreate() override {
     // add more GUI here
-    gui << pointSize << timeStep << gravConst << dragFactor << gravityBound << maxAccel; //stream operator
+    gui << pointSize << timeStep << seedVal << gravConst << dragFactor << maxAccel; //stream operator
     gui.init();
     navControl().useMouse(false);
 
@@ -103,12 +110,12 @@ struct AlloApp : App {
           Vec3f distance(mesh.vertices()[j] - mesh.vertices()[i]); //calculate distances between particles
           Vec3f gravityVal = gravConst * mass[i] * mass[j] * distance.normalize() / pow(distance.mag(), 2); // F = G * m1 * m2 / r^2
           //cout << gravityVal << endl;
-          if (gravityVal.mag() > gravityBound) {
-            gravityVal.normalize(gravityVal.mag()/10);
-          }
-          if (gravityVal.mag() < -gravityBound) {
-            gravityVal.normalize(-gravityVal.mag()/10);
-          }
+          // if (gravityVal.mag() > gravityBound) {
+          //   gravityVal.normalize(gravityVal.mag()/10);
+          // }
+          // if (gravityVal.mag() < -gravityBound) {
+          //   gravityVal.normalize(-gravityVal.mag()/10);
+          // }
           acceleration[i] += gravityVal/mass[i];
           acceleration[j] -= gravityVal/mass[j];
       }
@@ -125,10 +132,12 @@ struct AlloApp : App {
 
 
     //limit acceleration
-    for (int i = 0; i < partNum; i++) {
+    for (int i = 0; i < acceleration.size(); i++) {
       float m = acceleration[i].mag();
       if (m > maxAccel) {
         acceleration[i].normalize(maxAccel);
+        cout << "Limiting Acceleration: " << m << " -> " << (float)maxAccel
+             << endl;
       }
     }
 
