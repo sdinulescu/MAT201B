@@ -19,14 +19,14 @@ string slurp(string fileName); //forward declaration
 struct AlloApp : App {
   Parameter pointSize{"/pointSize", "", 1.0, "", 0.0, 2.0};
   Parameter timeStep{"/timeStep", "", 0.02, "", 0.01, 0.6}; //simplest way to not get NANs, keep timestep small
-  Parameter gravConst{"/gravConst", "", 0.002, "", 0, 1};
   Parameter dragFactor{"/dragFactor", "", 0.07, "", 0.01, 0.99};
-  //Parameter gravityBound{"/gravityBound", "", 0.8, "", 0.01, 0.99};
   Parameter maxAccel{"/maxAccel", "", 20, "", 0, 10};
   Parameter seedVal{"/seedVal", "", 42, "", 0, 100};
 
   Parameter minSeparationValue{"/minSeparationValue", "", 5, "", 0, 100};
   Parameter minDistanceValue{"/minDistanceValue", "", 10, "", 0, 100};
+  Parameter minCohesionValue{"/minCohesionValue", "", 30, "", 0, 100};
+  
   //add GUI params here
   ControlGUI gui;
 
@@ -78,7 +78,7 @@ struct AlloApp : App {
 
   void onCreate() override {
     // add more GUI here
-    gui << pointSize << timeStep << seedVal << gravConst << dragFactor << maxAccel << minSeparationValue << minDistanceValue; //stream operator
+    gui << pointSize << timeStep << seedVal << dragFactor << maxAccel << minSeparationValue << minDistanceValue << minCohesionValue; //stream operator
     gui.init();
     navControl().useMouse(false);
 
@@ -103,27 +103,37 @@ struct AlloApp : App {
     dt = timeStep; //simulation time, not wall time
 
     // *********** Calculate forces ***********
-
+    // BOIDS
     for (int i = 0; i < partNum; i++) { //nested for loops (for each particle, calculate force with all other particles but itself one at a time)
+      Vec3f nearbyBoidSum;
+      int nearbyBoidCount = 1;
       for (int j = 1+i; j < partNum; j++) {
-          Vec3f distance(mesh.vertices()[j] - mesh.vertices()[i]); //calculate distances between particles
-          // *********** separation ***********
-          if (distance.mag() <= minSeparationValue) {  //if they are too close together, separate
-            //steer them away from each other -> steering = desired position - velocity
-            Vec3f separate(mesh.vertices()[j] - velocity[j]);
-            acceleration[i] += separate.normalize();
-          }
+        Vec3f distance(mesh.vertices()[j] - mesh.vertices()[i]); //calculate distances between particles
+        // *********** separation ***********
+        if (distance.mag() <= minSeparationValue) {  //if they are too close together, separate
+          //steer them away from each other -> steering = desired position - velocity
+          Vec3f separate(mesh.vertices()[j] - velocity[j]);
+          acceleration[i] += separate.normalize();
+        }
 
-          // *********** alignment ***********
-          if (distance.mag() > minDistanceValue && distance.mag() > 0) { //if particles are too far away (past a distance value), bring them together
-            //steer them towards each other -> steering = desired position - velocity
-            Vec3f align(mesh.vertices()[j] - velocity[j]);
-            acceleration[i] += align.normalize();
-          }
+        // *********** alignment ***********
+        if (distance.mag() > minDistanceValue && distance.mag() > 0) { //if particles are too far away (past a distance value), bring them together
+          //steer them towards each other -> steering = desired position - velocity
+          Vec3f align(mesh.vertices()[j] - velocity[j]);
+          acceleration[i] += align.normalize();
+        }
 
-          // *********** cohesion ***********
-
+        // *********** cohesion ***********
+        if (distance.mag() < minCohesionValue) { //push back the positions of the nearby boids
+          nearbyBoidSum += mesh.vertices()[j];
+          nearbyBoidCount++;
+        }
       }
+
+      // calculate the center of the nearby boids -> this is the desired position
+      nearbyBoidSum /= nearbyBoidCount;
+      Vec3f cohesion(nearbyBoidSum - velocity[i]);
+      acceleration[i] += cohesion.normalize();
     }
 
     
@@ -141,8 +151,7 @@ struct AlloApp : App {
       float m = acceleration[i].mag();
       if (m > maxAccel) {
         acceleration[i].normalize(maxAccel);
-        cout << "Limiting Acceleration: " << m << " -> " << (float)maxAccel
-             << endl;
+        //cout << "Limiting Acceleration: " << m << " -> " << (float)maxAccel << endl;
       }
     }
 
