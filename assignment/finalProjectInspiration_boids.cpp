@@ -24,10 +24,10 @@ struct Agent : Pose {
 
 struct AlloApp : App {
   // add more GUI here
-  Parameter moveRate{"/moveRate", "", 0.35, "", 0.0, 2.0};
-  Parameter turnRate{"/turnRate", "", 0.15, "", 0.0, 2.0};
-  Parameter localRadius{"/localRadius", "", 0.6, "", 0.01, 0.9};
-  Parameter separationDistance{"/separationDistance", "", 0.15, "", 0.01, 0.9};
+  Parameter moveRate{"/moveRate", "", 1.0, "", 0.0, 2.0};
+  Parameter turnRate{"/turnRate", "", 1.0, "", 0.0, 2.0};
+  Parameter localRadius{"/localRadius", "", 0.126, "", 0.01, 0.9};
+  Parameter separationDistance{"/separationDistance", "", 0.720, "", 0.01, 0.9};
   Parameter size{"/size", "", 1.0, "", 0.0, 2.0};
   Parameter ratio{"/ratio", "", 1.0, "", 0.0, 2.0};
   ControlGUI gui;
@@ -75,9 +75,9 @@ struct AlloApp : App {
 
   void onAnimate(double dt) override {
     //calculate stuff
+    Vec3f avgHeading(0, 0, 0);
+    Vec3f centerPos(0, 0, 0);
     for (unsigned i = 0; i < agentNum; i++) {
-      Vec3f avgHeading(0, 0, 0);
-      Vec3f centerPos(0, 0, 0);
       agent[i].flockCount = 0; //reset flock count
       for (unsigned j = 1 + i; j < agentNum; j++) {
         float distance = (agent[j].pos() - agent[i].pos()).mag();
@@ -87,7 +87,8 @@ struct AlloApp : App {
           agent[i].flockCount++; //increase the flockmate count for that specific agent
           if (distance < separationDistance) {
             //cout << "separate" << endl;
-            agent[i].pos() -= agent[j].uf().normalize() * turnRate * 0.002;
+            //avgHeading -= agent[j].uf();
+            agent[i].pos() -= agent[j].uf().normalize() * moveRate * 0.002;
           } else {
             avgHeading += agent[j].uf();
             centerPos += agent[j].pos();
@@ -108,19 +109,19 @@ struct AlloApp : App {
    
     for (unsigned i = 0; i < agentNum; i++) {
       //alignment
-      agent[i].faceToward(agent[i].heading.normalize()); // point agents in the direction of their heading
+      agent[i].faceToward(agent[i].heading); // point agents in the direction of their heading
       //cohesion
-      agent[i].pos().lerp(agent[i].center.normalize() + agent[i].uf(), moveRate * 0.02);
-     // agent[i].pos() += agent[i].uf() * moveRate * 0.002; //move the agents along
+      agent[i].pos().lerp(agent[i].center, moveRate * 0.02);
+      //agent[i].pos() += agent[i].uf() * moveRate * 0.002; //move the agents along
     }
 
     // respawn agents if they go too far (MAYBE KEEP)
-    for (unsigned i = 0; i < agentNum; i++) {
-      if (agent[i].pos().mag() > 1.1) {
-        agent[i].pos(rv());
-        agent[i].faceToward(rv());
-      }
-    }
+    // for (unsigned i = 0; i < agentNum; i++) {
+    //   if (agent[i].pos().mag() > 1.1) {
+    //     agent[i].pos(rv());
+    //     agent[i].faceToward(rv());
+    //   }
+    // }
 
     // visualize the agents, update meshes
     vector<Vec3f>& v(mesh.vertices());
