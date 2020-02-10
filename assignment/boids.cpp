@@ -26,8 +26,8 @@ struct AlloApp : App {
   // add more GUI here
   Parameter moveRate{"/moveRate", "", 1.0, "", 0.0, 2.0};
   Parameter turnRate{"/turnRate", "", 1.0, "", 0.0, 2.0};
-  Parameter localRadius{"/localRadius", "", 0.08, "", 0.01, 0.9};
-  Parameter separationDistance{"/separationDistance", "", 0.01, "", 0.01, 0.9};
+  Parameter localRadius{"/localRadius", "", 0.126, "", 0.01, 0.9};
+  Parameter separationDistance{"/separationDistance", "", 0.720, "", 0.01, 0.9};
   Parameter size{"/size", "", 1.0, "", 0.0, 2.0};
   Parameter ratio{"/ratio", "", 1.0, "", 0.0, 2.0};
   ControlGUI gui;
@@ -87,7 +87,8 @@ struct AlloApp : App {
           agent[i].flockCount++; //increase the flockmate count for that specific agent
           if (distance < separationDistance) {
             //cout << "separate" << endl;
-            avgHeading -= agent[j].uf();
+            //avgHeading -= agent[j].uf();
+            agent[i].pos() -= agent[j].uf().normalize() * moveRate * 0.002;
           } else {
             avgHeading += agent[j].uf();
             centerPos += agent[j].pos();
@@ -115,12 +116,12 @@ struct AlloApp : App {
     }
 
     // respawn agents if they go too far (MAYBE KEEP)
-    for (unsigned i = 0; i < agentNum; i++) {
-      if (agent[i].pos().mag() > 1.1) {
-        agent[i].pos(rv());
-        agent[i].faceToward(rv());
-      }
-    }
+    // for (unsigned i = 0; i < agentNum; i++) {
+    //   if (agent[i].pos().mag() > 1.1) {
+    //     agent[i].pos(rv());
+    //     agent[i].faceToward(rv());
+    //   }
+    // }
 
     // visualize the agents, update meshes
     vector<Vec3f>& v(mesh.vertices());
