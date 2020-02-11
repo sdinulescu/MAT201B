@@ -17,8 +17,12 @@ using namespace al;
 //
 
 struct SharedState {
-  uint16_t frameCount{0};
-  // everything that is simulated
+    // we need shared state to be contiguous in memory -> can't declare a vector of things because it is a pointer (int) and a size (int)
+    // the renderer will interpret this information passed as a place in memory at that address and then it will crash
+    // need contiguous memory -> declare a fixed array
+    
+    uint16_t frameCount{0};
+    // everything that is simulated
 };
 
 // Inherit from DistributedApp and template it on the shared state data struct
