@@ -1,6 +1,7 @@
 #include "al/app/al_DistributedApp.hpp"
 #include "al/math/al_Random.hpp"
 #include "al/ui/al_ControlGUI.hpp"  // gui.draw(g)
+#include "al_ext/statedistribution/al_CuttleboneStateSimulationDomain.hpp"
 
 using namespace al;
 
@@ -8,11 +9,18 @@ using namespace al;
 #include <vector>
 using namespace std;
 
+const int AgentNum = 1000;
+
 Vec3f rv(float scale = 1.0f) {
   return Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()) * scale;
 }
 
 string slurp(string fileName);  // forward declaration
+
+/*Critical: 
+  - Pose is larger than it needs to be -> uses doubles and quat
+  - We don't draw heading, center, and flockCount -> need for simulating, useless for drawing
+*/
 
 struct Agent : Pose {
   Vec3f heading; //heading from POV of agent (sum of all the headings, then divide by the count)
@@ -20,12 +28,19 @@ struct Agent : Pose {
   unsigned flockCount{1}; 
 };
 
+// This is only what we need to draw on the GPU
+// Only share the state that needs to be shared for sending
+struct DrawableAgent {
+  Vec3f position, forward; //agents have a position and a forward
+  Vec3f up; //part of orientation -> which way is up?
+};
+
 struct SharedState {
     // we need shared state to be contiguous in memory -> can't declare a vector of things because it is a pointer (int) and a size (int)
     // the renderer will interpret this information passed as a place in memory at that address and then it will crash
     // need contiguous memory -> declare a fixed array
     
-    Agent agents[1000];
+    Agent agents[AgentNum];
     // everything that is simulated
 };
 
@@ -37,6 +52,11 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   Parameter size{"/size", "", 1.0, "", 0.0, 2.0};
   Parameter ratio{"/ratio", "", 1.0, "", 0.0, 2.0};
   ControlGUI gui;
+
+   // You can keep a pointer to the cuttlebone domain
+  // This can be useful to ask the domain if it is a sender or receiver
+  std::shared_ptr<CuttleboneStateSimulationDomain<SharedState>>
+      cuttleboneDomain;
 
   ShaderProgram shader;
   Mesh mesh;
@@ -51,6 +71,13 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void onCreate() override {
+    cuttleboneDomain =
+        CuttleboneStateSimulationDomain<SharedState>::enableCuttlebone(this);
+    if (!cuttleboneDomain) {
+      std::cerr << "ERROR: Could not start Cuttlebone. Quitting." << std::endl;
+      quit();
+    }
+
     // add more GUI here
     gui << moveRate << turnRate << localRadius << separationDistance << size << ratio;
     gui.init();
@@ -78,9 +105,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void onAnimate(double dt) override {
-    //calculate stuff
-    //if (isPrimary()) { // if it is the primary window
-        for (unsigned i = 0; i < agentNum; i++) {
+    if (cuttleboneDomain->isSender()) {
+      for (unsigned i = 0; i < agentNum; i++) {
             Vec3f avgHeading(0, 0, 0);
             Vec3f centerPos(0, 0, 0);
             state().agents[i].flockCount = 0; //reset flock count
@@ -108,11 +134,18 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         // only once the above loop is done do we have good data on average headings and centers
         // here is where we actually point them in the right direction and move them
     
+    
         for (unsigned i = 0; i < agentNum; i++) {
             //alignment
             state().agents[i].faceToward(state().agents[i].heading.normalize()); // point agents in the direction of their heading
             //cohesion
             state().agents[i].pos().lerp(state().agents[i].center.normalize() + state().agents[i].uf(), moveRate * 0.02);
+        }
+
+        //agent[] -> DrawableAgent[]
+        DrawableAgent dAgents[AgentNum];
+        for (unsigned i = 0; i < AgentNum; i++) {
+          
         }
 
         // respawn agents if they go too far (MAYBE KEEP)
@@ -122,7 +155,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
                 state().agents[i].faceToward(rv());
             }
         }
-    //}
+      navControl().active(!isImguiUsingInput());
+    }
 
     // visualize the agents, update meshes (for ALL screens)
     vector<Vec3f>& v(mesh.vertices());
@@ -134,6 +168,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       const Vec3d& up(state().agents[i].uu());
       c[i].set(up.x, up.y, up.z);
     }
+    
   }
 
   bool onKeyDown(const Keyboard& k) override {
@@ -144,6 +179,9 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void onDraw(Graphics& g) override {
+    //update this draw routine to use only state
+
+
     g.clear(0.1, 0.1, 0.1);
     // gl::depthTesting(true); // or g.depthTesting(true);
     // gl::blending(true); // or g.blending(true);
