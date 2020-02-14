@@ -28,6 +28,8 @@ struct Agent : Pose {
   unsigned flockCount{1}; 
 };
 
+Agent agents[AgentNum]; //declare a global agents array
+
 // This is only what we need to draw on the GPU
 // Only share the state that needs to be shared for sending
 struct DrawableAgent {
@@ -40,7 +42,9 @@ struct SharedState {
     // the renderer will interpret this information passed as a place in memory at that address and then it will crash
     // need contiguous memory -> declare a fixed array
     
-    Agent agents[AgentNum];
+    DrawableAgent agents[AgentNum];
+    float background;
+    float size, ratio;
     // everything that is simulated
 };
 
@@ -65,8 +69,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void reset() {
     for (int i = 0; i < agentNum; i++) {
-      state().agents[i].pos(rv());
-      state().agents[i].faceToward(rv());
+      agents[i].pos(rv());
+      agents[i].faceToward(rv());
     }
   }
 
@@ -94,7 +98,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       Agent a;
       a.pos(rv());
       a.faceToward(rv());
-      state().agents[i] = a;
+      agents[i] = a;
       
       mesh.vertex(a.pos());
       mesh.normal(a.uf());
@@ -107,68 +111,75 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void onAnimate(double dt) override {
     if (cuttleboneDomain->isSender()) {
       for (unsigned i = 0; i < agentNum; i++) {
-            Vec3f avgHeading(0, 0, 0);
-            Vec3f centerPos(0, 0, 0);
-            state().agents[i].flockCount = 0; //reset flock count
-            for (unsigned j = 1 + i; j < agentNum; j++) {
-                float distance = (state().agents[j].pos() - state().agents[i].pos()).mag();
-                
-                if (distance < localRadius) { 
-                //calculate alignment and cohesion vals if flock mates are far enough away from each other
-                state().agents[i].flockCount++; //increase the flockmate count for that specific agent
-                if (distance < separationDistance) {
-                    //cout << "separate" << endl;
-                    state().agents[i].pos() -= state().agents[j].uf().normalize() * turnRate * 0.002;
-                } else {
-                    avgHeading += state().agents[j].uf();
-                    centerPos += state().agents[j].pos();
-                }
-                } 
+        Vec3f avgHeading(0, 0, 0);
+        Vec3f centerPos(0, 0, 0);
+        agents[i].flockCount = 0; //reset flock count
+        for (unsigned j = 1 + i; j < agentNum; j++) {
+            float distance = (agents[j].pos() - agents[i].pos()).mag();
+            
+            if (distance < localRadius) { 
+            //calculate alignment and cohesion vals if flock mates are far enough away from each other
+            agents[i].flockCount++; //increase the flockmate count for that specific agent
+            if (distance < separationDistance) {
+                //cout << "separate" << endl;
+                agents[i].pos() -= agents[j].uf().normalize() * turnRate * 0.002;
+            } else {
+                avgHeading += agents[j].uf();
+                centerPos += agents[j].pos();
             }
-
-            if (state().agents[i].flockCount > 0) {
-                state().agents[i].heading = avgHeading.normalize()/state().agents[i].flockCount;
-                state().agents[i].center = centerPos.normalize()/state().agents[i].flockCount;
-            }
+            } 
         }
-        // only once the above loop is done do we have good data on average headings and centers
-        // here is where we actually point them in the right direction and move them
+
+        if (agents[i].flockCount > 0) {
+            agents[i].heading = avgHeading.normalize()/agents[i].flockCount;
+            agents[i].center = centerPos.normalize()/agents[i].flockCount;
+        }
+      }
+      // only once the above loop is done do we have good data on average headings and centers
+      // here is where we actually point them in the right direction and move them
+
+
+      for (unsigned i = 0; i < agentNum; i++) {
+          //alignment
+          agents[i].faceToward(agents[i].heading.normalize()); // point agents in the direction of their heading
+          //cohesion
+          agents[i].pos().lerp(agents[i].center.normalize() + agents[i].uf(), moveRate * 0.02);
+      }
+
+      // respawn agents if they go too far (MAYBE KEEP)
+      for (unsigned i = 0; i < agentNum; i++) {
+          if (agents[i].pos().mag() > 1.1) {
+              agents[i].pos(rv());
+              agents[i].faceToward(rv());
+          }
+      }
+
+      //copy only happens in primary screen
+      for (unsigned i = 0; i < AgentNum; i++) { //Agent array -> DrawableAgent array
+        DrawableAgent a;
+        a.position = agents[i].pos();
+        a.forward = agents[i].uf();
+        a.up = agents[i].uu();
+
+        state().agents[i] = a;
+      }
+
+      state().background = 0.1;
+      state().size = size.get();
+      state().ratio = ratio.get();
+    } else { }
+
     
-    
-        for (unsigned i = 0; i < agentNum; i++) {
-            //alignment
-            state().agents[i].faceToward(state().agents[i].heading.normalize()); // point agents in the direction of their heading
-            //cohesion
-            state().agents[i].pos().lerp(state().agents[i].center.normalize() + state().agents[i].uf(), moveRate * 0.02);
-        }
-
-        //agent[] -> DrawableAgent[]
-        DrawableAgent dAgents[AgentNum];
-        for (unsigned i = 0; i < AgentNum; i++) {
-          
-        }
-
-        // respawn agents if they go too far (MAYBE KEEP)
-        for (unsigned i = 0; i < agentNum; i++) {
-            if (state().agents[i].pos().mag() > 1.1) {
-                state().agents[i].pos(rv());
-                state().agents[i].faceToward(rv());
-            }
-        }
-      navControl().active(!isImguiUsingInput());
-    }
-
-    // visualize the agents, update meshes (for ALL screens)
+    // visualize the agents, update meshes using DrawableAgent in state (for ALL screens)
     vector<Vec3f>& v(mesh.vertices());
     vector<Vec3f>& n(mesh.normals());
     vector<Color>& c(mesh.colors());
     for (unsigned i = 0; i < agentNum; i++) {
-      v[i] = state().agents[i].pos();
-      n[i] = state().agents[i].uf();
-      const Vec3d& up(state().agents[i].uu());
+      v[i] = state().agents[i].position;
+      n[i] = state().agents[i].forward;
+      const Vec3d& up(state().agents[i].up);
       c[i].set(up.x, up.y, up.z);
     }
-    
   }
 
   bool onKeyDown(const Keyboard& k) override {
@@ -179,17 +190,15 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void onDraw(Graphics& g) override {
-    //update this draw routine to use only state
-
-
-    g.clear(0.1, 0.1, 0.1);
-    // gl::depthTesting(true); // or g.depthTesting(true);
-    // gl::blending(true); // or g.blending(true);
-    // gl::blendTrans(); // or g.blendModeTrans();
+    g.clear(state().background, state().background, state().background);
+    gl::depthTesting(true);  // or g.depthTesting(true);
+    gl::blending(true);      // or g.blending(true);
+    gl::blendTrans();        // or g.blendModeTrans();
     g.shader(shader);
-    g.shader().uniform("size", size * 0.03);
-    g.shader().uniform("ratio", ratio * 0.2);
+    g.shader().uniform("size", state().size * 0.03);
+    g.shader().uniform("ratio", state().ratio * 0.2);
     g.draw(mesh);
+
     if (isPrimary()) {
       gui.draw(g);
     }
