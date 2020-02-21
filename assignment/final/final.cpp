@@ -124,6 +124,58 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   }
 
+  // respawn agents if they go too far
+  void respawn() {
+    for (unsigned i = 0; i < agents.size(); i++) {
+        if (agents[i].pos().mag() > 1.1) {
+            agents[i].reset();
+        }
+    }
+  }
+
+  void calcFlockingAndSeparation() {
+    for (unsigned i = 0; i < agents.size(); i++) {
+      agents[i].decreaseLifespan(0.1);
+      Vec3f avgHeading(0, 0, 0);
+      Vec3f centerPos(0, 0, 0);
+      agents[i].flockCount = 0; //reset flock count
+      for (unsigned j = 1 + i; j < agents.size(); j++) {
+          float distance = (agents[j].pos() - agents[i].pos()).mag();
+          
+          if (distance < localRadius) { 
+          //calculate alignment and cohesion vals if flock mates are far enough away from each other
+          agents[i].flockCount++; //increase the flockmate count for that specific agent
+          if (distance < separationDistance) {
+              //cout << "separate" << endl;
+              agents[i].pos() -= agents[j].uf().normalize() * turnRate * 0.002;
+          } else {
+              avgHeading += agents[j].uf();
+              centerPos += agents[j].pos();
+          }
+          } 
+      }
+
+      if (agents[i].flockCount > 0) {
+          agents[i].heading = avgHeading.normalize()/agents[i].flockCount;
+          agents[i].center = centerPos.normalize()/agents[i].flockCount;
+      }
+    }
+  }
+
+  //flocking
+  void alignment() {
+    for (unsigned i = 0; i < agents.size(); i++) {
+      agents[i].faceToward(agents[i].heading.normalize()); // point agents in the direction of their heading
+    }
+  }
+
+  //flocking
+  void cohesion() {
+    for (unsigned i = 0; i < agents.size(); i++) {
+      agents[i].pos().lerp(agents[i].center.normalize() + agents[i].uf(), moveRate * 0.02);
+    }
+  }
+
   //set the states for rendering
   void setState() {
     //copy simulation agents into drawable agents for rendering
@@ -169,53 +221,15 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void onAnimate(double dt) override {
     if (cuttleboneDomain->isSender()) {
-      for (unsigned i = 0; i < agents.size(); i++) {
-        agents[i].decreaseLifespan(0.1);
-        Vec3f avgHeading(0, 0, 0);
-        Vec3f centerPos(0, 0, 0);
-        agents[i].flockCount = 0; //reset flock count
-        for (unsigned j = 1 + i; j < agents.size(); j++) {
-            float distance = (agents[j].pos() - agents[i].pos()).mag();
-            
-            if (distance < localRadius) { 
-            //calculate alignment and cohesion vals if flock mates are far enough away from each other
-            agents[i].flockCount++; //increase the flockmate count for that specific agent
-            if (distance < separationDistance) {
-                //cout << "separate" << endl;
-                agents[i].pos() -= agents[j].uf().normalize() * turnRate * 0.002;
-            } else {
-                avgHeading += agents[j].uf();
-                centerPos += agents[j].pos();
-            }
-            } 
-        }
+      calcFlockingAndSeparation();
+      alignment();
+      cohesion();
 
-        if (agents[i].flockCount > 0) {
-            agents[i].heading = avgHeading.normalize()/agents[i].flockCount;
-            agents[i].center = centerPos.normalize()/agents[i].flockCount;
-        }
-      }
-
-      for (unsigned i = 0; i < agents.size(); i++) {
-        //alignment
-        agents[i].faceToward(agents[i].heading.normalize()); // point agents in the direction of their heading
-        //cohesion
-        agents[i].pos().lerp(agents[i].center.normalize() + agents[i].uf(), moveRate * 0.02);
-      }
-
-      // respawn agents if they go too far
-      for (unsigned i = 0; i < agents.size(); i++) {
-          if (agents[i].pos().mag() > 1.1) {
-              agents[i].reset();
-          }
-      }
-
+      respawn();
       checkAgentDeath();
       setState();
+    } else {  nav().set(state().cameraPose);  }
 
-    } else { }
-
-    
     visualizeAgents();
   }
 
