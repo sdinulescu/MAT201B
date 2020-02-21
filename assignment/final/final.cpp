@@ -5,26 +5,28 @@
  * Incorporating an evolutionary algorithm, as time progresses, we see changes in flocking shape.
  */
 
+//allolib includes
 #include "al/app/al_DistributedApp.hpp"
 #include "al/math/al_Random.hpp"
 #include "al/ui/al_ControlGUI.hpp"
-
+//cuttlebone includes
 #include "al_ext/statedistribution/al_CuttleboneStateSimulationDomain.hpp"
-
-#include "agent.cpp"
-#include "state.cpp"
-
-using namespace al;
-
+//c std library includes
 #include <fstream>
 #include <vector>
+//my includes
+#include "agent.cpp"
+#include "state.cpp"
+//namespaces
+using namespace al;
 using namespace std;
 
 // forward declarations of some functions
 string slurp(string fileName); 
 
-const int AgentNum = 1000;
-Agent agents[AgentNum]; //declare a global agents array
+//global vars/containers
+const int AGENT_NUM = 1000;
+vector<Agent> agents;
 
 class MyApp : public DistributedAppWithState<SharedState>  {
   //Gui params
@@ -44,6 +46,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
  //***********************************************************************
  //Everything needed for onCreate
+
   void initCuttlebone() {
     //cuttlebone
     cuttleboneDomain =
@@ -61,9 +64,9 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void initAgents() {
-    for (int i = 0; i < AgentNum; i++) {
+    for (int i = 0; i < AGENT_NUM; i++) {
       Agent a;
-      agents[i] = a;
+      agents.push_back(a);
       
       mesh.vertex(a.pos());
       mesh.normal(a.uf());
@@ -73,7 +76,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void reset() {
-    for (int i = 0; i < AgentNum; i++) {
+    for (int i = 0; i < agents.size(); i++) {
       agents[i].reset();
     }
   }
@@ -102,34 +105,60 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 //***********************************************************************
 //Everything needed for onAnimate()
 
+  //set the states for rendering
   void setState() {
-    //copy only happens in primary screen
-      for (unsigned i = 0; i < AgentNum; i++) { //Agent array -> DrawableAgent array
-        DrawableAgent a;
-        a.position = agents[i].pos();
-        a.forward = agents[i].uf();
-        a.up = agents[i].uu();
-
+    //copy simulation agents into drawable agents for rendering
+      for (unsigned i = 0; i < agents.size(); i++) {
+        DrawableAgent a(agents[i].pos(), agents[i].uf(), agents[i].uu());
         state().agents[i] = a;
       }
+      if (agents.size() < AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
+        for (int i = agents.size(); i < AGENT_NUM; i++) {
+          DrawableAgent a();
+        }
+      }
 
+      //set the other state vars
       state().cameraPose.set(nav());
       state().background = 0.1;
       state().size = size.get();
       state().ratio = ratio.get();
   }
 
+  // visualize the agents, update meshes using DrawableAgent in state (for ALL screens)
   void visualizeAgents() {
-    // visualize the agents, update meshes using DrawableAgent in state (for ALL screens)
     vector<Vec3f>& v(mesh.vertices());
     vector<Vec3f>& n(mesh.normals());
     vector<Color>& c(mesh.colors());
-    for (unsigned i = 0; i < AgentNum; i++) {
-      v[i] = state().agents[i].position;
-      n[i] = state().agents[i].forward;
-      const Vec3d& up(state().agents[i].up);
-      c[i].set(up.x, up.y, up.z);
+    for (unsigned i = 0; i < agents.size(); i++) {
+      if (agents[i].isDead() == false) { //if the agent is not dead, visualize it
+        v[i] = state().agents[i].position;
+        n[i] = state().agents[i].forward;
+        const Vec3d& up(state().agents[i].up);
+        c[i].set(up.x, up.y, up.z);
+      } else { // kill the agent
+         agents.erase(agents.begin()+i);
+      }
     }
+  }
+
+  //reproduce between two boids
+  void reproduce() { 
+
+  }
+
+  //check if the agent is dead
+  void checkAgentDeath() {
+    for (int i = 0; i < agents.size(); i++) {
+      if (agents[i].lifespan <= 0) {
+        agents[i].kill(true);
+        cout << "dead" << endl;
+      }
+    }
+  }
+
+  void eat() { // if the agent is at a specific location in the environment and finds food, then increase it's lifespan
+
   }
 
  //***********************************************************************
@@ -137,11 +166,12 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void onAnimate(double dt) override {
     if (cuttleboneDomain->isSender()) {
-      for (unsigned i = 0; i < AgentNum; i++) {
+      for (unsigned i = 0; i < agents.size(); i++) {
+        agents[i].decreaseLifespan(0.1);
         Vec3f avgHeading(0, 0, 0);
         Vec3f centerPos(0, 0, 0);
         agents[i].flockCount = 0; //reset flock count
-        for (unsigned j = 1 + i; j < AgentNum; j++) {
+        for (unsigned j = 1 + i; j < agents.size(); j++) {
             float distance = (agents[j].pos() - agents[i].pos()).mag();
             
             if (distance < localRadius) { 
@@ -163,7 +193,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         }
       }
 
-      for (unsigned i = 0; i < AgentNum; i++) {
+      for (unsigned i = 0; i < agents.size(); i++) {
         //alignment
         agents[i].faceToward(agents[i].heading.normalize()); // point agents in the direction of their heading
         //cohesion
@@ -171,11 +201,13 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       }
 
       // respawn agents if they go too far
-      for (unsigned i = 0; i < AgentNum; i++) {
+      for (unsigned i = 0; i < agents.size(); i++) {
           if (agents[i].pos().mag() > 1.1) {
               agents[i].reset();
           }
       }
+
+      checkAgentDeath();
 
       setState();
     } else { }
