@@ -105,43 +105,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 //***********************************************************************
 //Everything needed for onAnimate()
 
-  //set the states for rendering
-  void setState() {
-    //copy simulation agents into drawable agents for rendering
-      for (unsigned i = 0; i < agents.size(); i++) {
-        DrawableAgent a(agents[i].pos(), agents[i].uf(), agents[i].uu());
-        state().agents[i] = a;
-      }
-      if (agents.size() < AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
-        for (int i = agents.size(); i < AGENT_NUM; i++) {
-          DrawableAgent a();
-        }
-      }
-
-      //set the other state vars
-      state().cameraPose.set(nav());
-      state().background = 0.1;
-      state().size = size.get();
-      state().ratio = ratio.get();
-  }
-
-  // visualize the agents, update meshes using DrawableAgent in state (for ALL screens)
-  void visualizeAgents() {
-    vector<Vec3f>& v(mesh.vertices());
-    vector<Vec3f>& n(mesh.normals());
-    vector<Color>& c(mesh.colors());
-    for (unsigned i = 0; i < agents.size(); i++) {
-      if (agents[i].isDead() == false) { //if the agent is not dead, visualize it
-        v[i] = state().agents[i].position;
-        n[i] = state().agents[i].forward;
-        const Vec3d& up(state().agents[i].up);
-        c[i].set(up.x, up.y, up.z);
-      } else { // kill the agent
-         agents.erase(agents.begin()+i);
-      }
-    }
-  }
-
   //reproduce between two boids
   void reproduce() { 
 
@@ -151,14 +114,54 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void checkAgentDeath() {
     for (int i = 0; i < agents.size(); i++) {
       if (agents[i].lifespan <= 0) {
-        agents[i].kill(true);
-        cout << "dead" << endl;
+        agents.erase(agents.begin()+i);
+        //cout << agents.size() << endl;
       }
     }
   }
 
   void eat() { // if the agent is at a specific location in the environment and finds food, then increase it's lifespan
 
+  }
+
+  //set the states for rendering
+  void setState() {
+    //copy simulation agents into drawable agents for rendering
+    //cout << agents.size() << endl;
+    for (unsigned i = 0; i < agents.size(); i++) {
+      DrawableAgent a(agents[i].pos(), agents[i].uf(), agents[i].uu());
+      state().dAgents[i] = a;
+    }
+    if (agents.size() < AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
+      for (int i = agents.size(); i < AGENT_NUM; i++) {
+        DrawableAgent a(Vec3f(0, 0, 0), Vec3f(0, 0, 0), Vec3f(0, 0, 0));
+        state().dAgents[i] = a;
+      }
+    }
+
+    //set the other state vars
+    state().cameraPose.set(nav());
+    state().background = 0.1;
+    state().size = size.get();
+    state().ratio = ratio.get();
+  }
+
+  // visualize the agents, update meshes using DrawableAgent in state (for ALL screens)
+  void visualizeAgents() {
+    vector<Vec3f>& v(mesh.vertices());
+    vector<Vec3f>& n(mesh.normals());
+    vector<Color>& c(mesh.colors());
+    for (unsigned i = 0; i < agents.size(); i++) {
+      v[i] = state().dAgents[i].position;
+      n[i] = state().dAgents[i].forward;
+      const Vec3d& up(state().dAgents[i].up);
+      c[i].set(up.x, up.y, up.z);
+    }
+    if (agents.size() < AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
+      for (int i = agents.size(); i < AGENT_NUM; i++) {
+        c[i].set(0, 0, 0); //don't draw that agent
+      }
+    }
   }
 
  //***********************************************************************
@@ -208,8 +211,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       }
 
       checkAgentDeath();
-
       setState();
+
     } else { }
 
     

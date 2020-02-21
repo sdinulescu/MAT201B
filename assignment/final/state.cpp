@@ -15,7 +15,7 @@ const int MAX_AGENT_NUM = 1000;
 // Everything that is simulated
 struct SharedState {
     Pose cameraPose;
-    DrawableAgent agents[MAX_AGENT_NUM];
+    DrawableAgent dAgents[MAX_AGENT_NUM];
     float background;
     float size, ratio;
 };

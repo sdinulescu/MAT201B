@@ -18,7 +18,6 @@ struct Agent : Pose {
   //Agent's have a position, which is inherited from Pose -> .pos()
   //Agents have a unit forward vector, which is inherited from Pose -> .uf()
   float lifespan; // agents die after a certain point
-  bool dead;
 
   //flocking attributes
   Vec3f heading; //heading from POV of agent (sum of all the headings, then divide by the count)
@@ -31,9 +30,8 @@ struct Agent : Pose {
   void reset() { //give agents a pos and a forward
     pos(randomVec3f());
     faceToward(randomVec3f());
-    lifespan = rnd::uniform() * 10.0f;
-    cout << "lifespan: " << lifespan << endl;
-    dead = false; //agent is alive to start with
+    lifespan = rnd::uniform() * 100.0f;
+    //cout << "lifespan: " << lifespan << endl;
   }
 
   //getters and setters
@@ -44,14 +42,6 @@ struct Agent : Pose {
   void decreaseLifespan(float l) {
     lifespan -=l;
   }
-
-  void kill(bool d) {
-    dead = d;
-  }
-
-  bool isDead() {
-    return dead;
-  }
 };
 
 // This is only what we need to draw on the GPU
@@ -59,11 +49,7 @@ struct DrawableAgent {
   Vec3f position, forward; //agents have a position and a forward
   Vec3f up; //part of orientation -> which way is up?
 
-  DrawableAgent() {
-    position = Vec3f(0, 0, 0);
-    forward = Vec3f(0, 0, 0);
-    up = Vec3f(0, 0, 0);
-  }
+  DrawableAgent() {}
 
   DrawableAgent(Vec3f p, Vec3f f, Vec3f u) {
     position = p;
