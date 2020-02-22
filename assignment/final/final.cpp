@@ -83,8 +83,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void initFoodMesh() {
     for(int i = 0; i < field.getFoodNum(); i++) {
       foodMesh.vertex(field.food[i].getPosition());
-      //foodMesh.color(field.food[i].getColor());
-      foodMesh.color(1.0f, 0.0f, 0.0f);
+      foodMesh.color(field.food[i].getColor());
+      //foodMesh.color(1.0f, 0.0f, 0.0f);
 
     }
 
@@ -294,7 +294,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     g.shader().uniform("size", state().size * 0.03);
     g.shader().uniform("ratio", state().ratio * 0.2);
     g.draw(mesh);
-    g.draw(foodMesh);
+    //g.draw(foodMesh);
 
     if (cuttleboneDomain->isSender()) {
       gui.draw(g);
