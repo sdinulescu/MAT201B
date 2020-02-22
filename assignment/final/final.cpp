@@ -17,6 +17,7 @@
 //my includes
 #include "agent.cpp"
 #include "state.cpp"
+#include "field.cpp"
 //namespaces
 using namespace al;
 using namespace std;
@@ -42,7 +43,11 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       cuttleboneDomain;
 
   ShaderProgram shader;
+
   Mesh mesh;
+  Mesh foodMesh;
+
+  Field field;
 
  //***********************************************************************
  //Everything needed for onCreate
@@ -75,10 +80,22 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
+  void initFoodMesh() {
+    for(int i = 0; i < field.getFoodNum(); i++) {
+      foodMesh.vertex(field.food[i].getPosition());
+      //foodMesh.color(field.food[i].getColor());
+      foodMesh.color(1.0f, 0.0f, 0.0f);
+
+    }
+
+    cout << foodMesh.vertices().size() << endl; //food mesh is filled with stuff
+  }
+
   void reset() {
     for (int i = 0; i < agents.size(); i++) {
       agents[i].reset();
     }
+    field.resetField();
   }
 
  //***********************************************************************
@@ -97,6 +114,11 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
     //mesh
     mesh.primitive(Mesh::POINTS);
+    foodMesh.primitive(Mesh::POINTS);
+
+
+    field.initFood(); // fill the food vector with food
+    initFoodMesh(); //init the mesh with food vector
 
     initAgents();
     nav().pos(0, 0, 10);
@@ -216,21 +238,40 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
+  void visualizeFood() { //update the mesh
+  vector<Vec3f>& v(foodMesh.vertices());
+  vector<Color>& c(foodMesh.colors());
+    for (int i = 0; i < field.getFoodNum(); i++) {
+      //cout << "food pos: " << field.food[i].getPosition() << endl;
+      //cout << "food col: " << foodMesh.colors()[i].rgb(). << endl;
+
+      v[i] = field.food[i].getPosition();
+      c[i] = field.food[i].getColor();
+    }
+  }
+
  //***********************************************************************
  //onAnimate
 
   void onAnimate(double dt) override {
     if (cuttleboneDomain->isSender()) {
+      //field
+      field.moveFood();
+
+      //agents
       calcFlockingAndSeparation();
       alignment();
       cohesion();
 
       respawn();
       checkAgentDeath();
+
+      //state
       setState();
     } else {  nav().set(state().cameraPose);  }
 
     visualizeAgents();
+    visualizeFood();
   }
 
  //***********************************************************************
@@ -253,6 +294,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     g.shader().uniform("size", state().size * 0.03);
     g.shader().uniform("ratio", state().ratio * 0.2);
     g.draw(mesh);
+    g.draw(foodMesh);
 
     if (isPrimary()) {
       gui.draw(g);
