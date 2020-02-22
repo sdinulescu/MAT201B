@@ -296,7 +296,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     g.draw(mesh);
     g.draw(foodMesh);
 
-    if (isPrimary()) {
+    if (cuttleboneDomain->isSender()) {
       gui.draw(g);
     }
   }
