@@ -39,7 +39,7 @@ struct Food {
 };
 
 struct Field {
-  const static int foodNum = 500;
+  int amountOfFood = 500;
   vector<Food> food;
 
   void resetField() {
@@ -49,7 +49,7 @@ struct Field {
 
   //Food
   void initializeFood() {
-    for (int i = 0; i < foodNum; i++) {
+    for (int i = 0; i < amountOfFood; i++) {
       Food f;
       food.push_back(f);
     }
@@ -71,10 +71,22 @@ struct Field {
         food.erase(food.begin() + i);
       }
     }
+
+    amountOfFood = food.size();
   }
 
-  int getFoodNum() {
-    return foodNum;
+  void addFood() {
+    int foodToAdd = rnd::uniform() * 100;
+    cout << "adding " << foodToAdd << " food!" << endl;
+    for (int i = 0; i < foodToAdd; i++) {
+      Food f;
+      food.push_back(f);
+    }
+    cout << "new food size: " << food.size() << endl;
+  }
+
+  int getAmountOfFood() {
+    return amountOfFood;
   }
 
   //Forces

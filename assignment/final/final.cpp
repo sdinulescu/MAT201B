@@ -82,7 +82,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void initFoodMesh() {
-    for(int i = 0; i < field.getFoodNum(); i++) {
+    for(int i = 0; i < field.getAmountOfFood(); i++) {
       foodMesh.vertex(field.food[i].getPosition());
       foodMesh.color(field.food[i].getColor());
       foodMesh.texCoord(field.food[i].getSize());
@@ -133,6 +133,15 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
+  void respawnFood() { // TO DO: only respawn food if something is triggered in the environment
+    int foodThreshold = 100;
+    if (field.getAmountOfFood() < foodThreshold) { //if there are less than 50 food particles in the field
+    cout << "food is under " << foodThreshold << endl;
+      field.addFood();
+    }
+  }
+
+  //TO DO!!
   //reproduce between two boids
   void reproduce() { 
 
@@ -239,7 +248,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void visualizeFood() { //update the mesh
     foodMesh.reset();
-    for (int i = 0; i < field.getFoodNum(); i++) {
+    for (int i = 0; i < field.getAmountOfFood(); i++) {
       //cout << "food pos: " << field.food[i].getPosition() << endl;
       //cout << "food col: " << foodMesh.colors()[i].rgb(). << endl;
       foodMesh.vertex(field.food[i].getPosition());
@@ -252,16 +261,20 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void onAnimate(double dt) override {
     if (cuttleboneDomain->isSender()) {
-      //agents
+      //update the food
+      respawnFood();
+
+      //update agents
       calcFlockingAndSeparation();
       alignment();
       cohesion();
 
       //respawn(); // make this a GUI toggle potentially
+
       checkAgentDeath();
       eatFood();
 
-      //field
+      //update field
       field.moveFood();
       field.updateFood(); //do this after we eat food
 
