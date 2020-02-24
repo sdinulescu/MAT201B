@@ -70,7 +70,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void initAgents() {
-    for (int i = 0; i < AGENT_NUM; i++) {
+    for (int i = agents.size(); i < AGENT_NUM; i++) {
       Agent a;
       agents.push_back(a);
       
@@ -82,27 +82,11 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void initFoodMesh() {
-    cout <<  "foodNum: " << field.getFoodNum() << endl;
-
     for(int i = 0; i < field.getFoodNum(); i++) {
       foodMesh.vertex(field.food[i].getPosition());
       foodMesh.color(field.food[i].getColor());
       foodMesh.texCoord(field.food[i].getSize());
     }
-
-    cout << foodMesh.vertices().size() << endl; //food mesh is filled with stuff
-  }
-
-  void reset() {
-    cout << "reset agents" << endl;
-    for (int i = 0; i < agents.size(); i++) {
-      agents[i].reset();
-    }
-
-    cout << "reset field" << endl;
-    foodMesh.reset();
-    field.resetField();
-    initFoodMesh();
   }
 
   //***********************************************************************
@@ -127,11 +111,10 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     foodMesh.primitive(Mesh::POINTS);
 
     field.resetField(); //initializes the field (fills the food array)
-    cout << "----------------" << endl;
     initFoodMesh(); //init the mesh with food vector
 
     initAgents();
-    nav().pos(0, 0, 10);
+    nav().pos(0, 0, 3);
   }
 
   //***********************************************************************
@@ -281,6 +264,22 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //***********************************************************************
   // key pressed
 
+  void reset() { //reset agents
+    cout << agents.size() << endl;
+    for (int i = 0; i < agents.size(); i++) {
+      agents[i].reset();
+    }
+    for (int i = agents.size(); i < AGENT_NUM; i++) {
+      Agent a; 
+      agents.push_back(a);
+    }
+
+    cout << "reset field" << endl;
+    foodMesh.reset();
+    field.resetField();
+    initFoodMesh();
+  }
+
   bool onKeyDown(const Keyboard& k) override {
     if (k.key() == 'r') {
       reset();
@@ -304,9 +303,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     g.shader(foodShader);
     g.shader().uniform("pointSize", state().size * 0.03);
     cout << "renderFood" << endl;
-    for (int i = 0 ; i < 20; i++) {
-      cout << foodMesh.vertices()[i] << endl;
-    }
     g.draw(foodMesh);
   }
 
@@ -317,7 +313,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     //gl::blendTrans();        // or g.blendModeTrans();
 
     //renderFood(g);
-    gl::pointSize(state().size);
+    gl::pointSize(state().size * 3);
     g.draw(foodMesh);
 
     renderAgents(g);

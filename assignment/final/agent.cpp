@@ -31,7 +31,6 @@ struct Agent : Pose {
     pos(randomVec3f());
     faceToward(randomVec3f());
     lifespan = rnd::uniform() * 100.0f;
-    //cout << "lifespan: " << lifespan << endl;
   }
 
   //getters and setters

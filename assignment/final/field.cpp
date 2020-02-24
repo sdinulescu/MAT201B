@@ -17,14 +17,16 @@ struct Food {
   Vec3f velocity;
 
   Food() { //Food constructor
-    //auto rc = [&]() { return HSV(rnd::uniform(), rnd::uniform(), rnd::uniform()); };
-    auto rv = [&]() { return Vec3f(rnd::uniformS() * 0.1, rnd::uniformS()* 0.1, rnd::uniformS()* 0.1); };
-    
     color = Color(1.0f, 0.0f, 0.0f, 1.0f);
     size = 1 + rnd::uniform() * 10; //at least a size of 1
-    position = rv();
-    velocity = rv();
-    cout << " size: " << size << " position: " << position << " velocity: " << velocity << endl;
+    position = Vec3f( rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  );
+    velocity = Vec3f(  rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  ) * 0.001;
+    //cout << " size: " << size << " position: " << position << " velocity: " << velocity << endl;
+  }
+
+  void reset() {
+    Vec3f p{  rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  };
+    position = p;
   }
 
   void setSize(int s) { size = s; }
@@ -35,7 +37,7 @@ struct Food {
 };
 
 struct Field {
-  const static int foodNum = 1000;
+  const static int foodNum = 500;
   Food food[foodNum];
 
   void resetField() {
@@ -52,7 +54,11 @@ struct Field {
 
   void moveFood() {
     for (int i = 0; i < foodNum; i++) {
-      food[i].position += food[i].velocity; //moving at constant vel
+      if (food[i].position.mag() > 1.1) {
+        food[i].reset();
+      } else {
+        food[i].position += food[i].velocity; //76moving at constant vel
+      }
     }
   }
 
