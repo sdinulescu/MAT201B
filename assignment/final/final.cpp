@@ -42,9 +42,10 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   std::shared_ptr<CuttleboneStateSimulationDomain<SharedState>>
       cuttleboneDomain;
 
-  ShaderProgram shader;
+  ShaderProgram agentShader;
+  ShaderProgram foodShader;
 
-  Mesh mesh;
+  Mesh agentMesh;
   Mesh foodMesh;
 
   Field field;
@@ -73,33 +74,39 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       Agent a;
       agents.push_back(a);
       
-      mesh.vertex(a.pos());
-      mesh.normal(a.uf());
+      agentMesh.vertex(a.pos());
+      agentMesh.normal(a.uf());
       const Vec3f& up(a.uu());
-      mesh.color(up.x, up.y, up.z);
+      agentMesh.color(up.x, up.y, up.z);
     }
   }
 
   void initFoodMesh() {
+    cout <<  "foodNum: " << field.getFoodNum() << endl;
+
     for(int i = 0; i < field.getFoodNum(); i++) {
       foodMesh.vertex(field.food[i].getPosition());
       foodMesh.color(field.food[i].getColor());
-      //foodMesh.color(1.0f, 0.0f, 0.0f);
-
+      foodMesh.texCoord(field.food[i].getSize());
     }
 
     cout << foodMesh.vertices().size() << endl; //food mesh is filled with stuff
   }
 
   void reset() {
+    cout << "reset agents" << endl;
     for (int i = 0; i < agents.size(); i++) {
       agents[i].reset();
     }
+
+    cout << "reset field" << endl;
+    foodMesh.reset();
     field.resetField();
+    initFoodMesh();
   }
 
- //***********************************************************************
- //onCreate
+  //***********************************************************************
+  //onCreate
 
   void onCreate() override {
     initCuttlebone();
@@ -108,24 +115,27 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     navControl().useMouse(false);
 
     // compile shaders
-    shader.compile(slurp("../tetrahedron-vertex.glsl"),
+    agentShader.compile(slurp("../tetrahedron-vertex.glsl"),
                    slurp("../tetrahedron-fragment.glsl"),
                    slurp("../tetrahedron-geometry.glsl"));
+    foodShader.compile(slurp("../point-vertex.glsl"),
+                   slurp("../point-fragment.glsl"),
+                   slurp("../point-geometry.glsl"));
 
     //mesh
-    mesh.primitive(Mesh::POINTS);
+    agentMesh.primitive(Mesh::POINTS);
     foodMesh.primitive(Mesh::POINTS);
 
-
-    field.initFood(); // fill the food vector with food
+    field.resetField(); //initializes the field (fills the food array)
+    cout << "----------------" << endl;
     initFoodMesh(); //init the mesh with food vector
 
     initAgents();
     nav().pos(0, 0, 10);
   }
 
-//***********************************************************************
-//Everything needed for onAnimate()
+  //***********************************************************************
+  //Everything needed for onAnimate()
 
   //reproduce between two boids
   void reproduce() { 
@@ -222,36 +232,30 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   // visualize the agents, update meshes using DrawableAgent in state (for ALL screens)
   void visualizeAgents() {
-    vector<Vec3f>& v(mesh.vertices());
-    vector<Vec3f>& n(mesh.normals());
-    vector<Color>& c(mesh.colors());
     for (unsigned i = 0; i < agents.size(); i++) {
-      v[i] = state().dAgents[i].position;
-      n[i] = state().dAgents[i].forward;
+      agentMesh.vertices()[i] = state().dAgents[i].position;
+      agentMesh.normals()[i] = state().dAgents[i].forward;
       const Vec3d& up(state().dAgents[i].up);
-      c[i].set(up.x, up.y, up.z);
+      agentMesh.colors()[i].set(up.x, up.y, up.z);
     }
     if (agents.size() < AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
       for (int i = agents.size(); i < AGENT_NUM; i++) {
-        c[i].set(0, 0, 0); //don't draw that agent
+        agentMesh.colors()[i].set(0, 0, 0); //don't draw that agent
       }
     }
   }
 
   void visualizeFood() { //update the mesh
-  vector<Vec3f>& v(foodMesh.vertices());
-  vector<Color>& c(foodMesh.colors());
     for (int i = 0; i < field.getFoodNum(); i++) {
       //cout << "food pos: " << field.food[i].getPosition() << endl;
       //cout << "food col: " << foodMesh.colors()[i].rgb(). << endl;
-
-      v[i] = field.food[i].getPosition();
-      c[i] = field.food[i].getColor();
+      foodMesh.vertices()[i] = field.food[i].getPosition();
+      //foodMesh.colors()[i] = field.food[i].getColor();
     }
   }
 
- //***********************************************************************
- //onAnimate
+  //***********************************************************************
+  //update loop
 
   void onAnimate(double dt) override {
     if (cuttleboneDomain->isSender()) {
@@ -274,7 +278,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     visualizeFood();
   }
 
- //***********************************************************************
+  //***********************************************************************
+  // key pressed
 
   bool onKeyDown(const Keyboard& k) override {
     if (k.key() == 'r') {
@@ -283,18 +288,39 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     return true;
   }
 
- //***********************************************************************
+  //***********************************************************************
+  // draw loop
+
+  void renderAgents(Graphics& g) {
+    //agent shader
+    g.shader(agentShader);
+    g.shader().uniform("size", state().size * 0.03);
+    g.shader().uniform("ratio", state().ratio * 0.2);
+    g.draw(agentMesh);
+  }
+
+  void renderFood(Graphics& g) {
+    //food shader
+    g.shader(foodShader);
+    g.shader().uniform("pointSize", state().size * 0.03);
+    cout << "renderFood" << endl;
+    for (int i = 0 ; i < 20; i++) {
+      cout << foodMesh.vertices()[i] << endl;
+    }
+    g.draw(foodMesh);
+  }
 
   void onDraw(Graphics& g) override {
     g.clear(state().background, state().background, state().background);
     gl::depthTesting(true);  // or g.depthTesting(true);
     gl::blending(true);      // or g.blending(true);
-    gl::blendTrans();        // or g.blendModeTrans();
-    g.shader(shader);
-    g.shader().uniform("size", state().size * 0.03);
-    g.shader().uniform("ratio", state().ratio * 0.2);
-    g.draw(mesh);
-    //g.draw(foodMesh);
+    //gl::blendTrans();        // or g.blendModeTrans();
+
+    //renderFood(g);
+    gl::pointSize(state().size);
+    g.draw(foodMesh);
+
+    renderAgents(g);
 
     if (cuttleboneDomain->isSender()) {
       gui.draw(g);
@@ -302,14 +328,16 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 };
 
- //***********************************************************************
+//***********************************************************************
+// main
 
 int main() {
   MyApp app;
   app.start();
 }
 
- //***********************************************************************
+//***********************************************************************
+// random methods
 
 string slurp(string fileName) {
   fstream file(fileName);
