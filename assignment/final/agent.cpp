@@ -38,8 +38,11 @@ struct Agent : Pose {
     return lifespan;
   }
 
-  void decreaseLifespan(float l) {
-    lifespan -=l;
+  void decreaseLifespan(float amount) {
+    lifespan -= amount;
+  }
+  void increaseLifespan(float amount) {
+    lifespan += amount;
   }
 };
 

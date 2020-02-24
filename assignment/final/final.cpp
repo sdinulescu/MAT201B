@@ -120,6 +120,19 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //***********************************************************************
   //Everything needed for onAnimate()
 
+  void eatFood() { // if the agent is at a specific location in the environment and finds food, then increase it's lifespan
+    for (int i = 0; i < agents.size(); i++) { //check each of the agents
+      for (int j = 0; j < field.food.size(); j++) { //chech each of the food particles
+        float distance = Vec3f(agents[i].pos() - field.food[j].getPosition()).mag();
+        if (distance < 0.1) { //if the agent is this close to the food particle
+          //cout << "food @ index " << i << " consumed!" << endl;
+          field.food[j].isConsumed = true;
+          agents[i].increaseLifespan(field.food[j].getSize()); //increase agent's lifespan by the food size
+        }
+      }
+    }
+  }
+
   //reproduce between two boids
   void reproduce() { 
 
@@ -133,10 +146,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         //cout << agents.size() << endl;
       }
     }
-  }
-
-  void eat() { // if the agent is at a specific location in the environment and finds food, then increase it's lifespan
-
   }
 
   // respawn agents if they go too far
@@ -229,11 +238,12 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void visualizeFood() { //update the mesh
+    foodMesh.reset();
     for (int i = 0; i < field.getFoodNum(); i++) {
       //cout << "food pos: " << field.food[i].getPosition() << endl;
       //cout << "food col: " << foodMesh.colors()[i].rgb(). << endl;
-      foodMesh.vertices()[i] = field.food[i].getPosition();
-      //foodMesh.colors()[i] = field.food[i].getColor();
+      foodMesh.vertex(field.food[i].getPosition());
+      foodMesh.color(field.food[i].getColor());
     }
   }
 
@@ -242,16 +252,18 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void onAnimate(double dt) override {
     if (cuttleboneDomain->isSender()) {
-      //field
-      field.moveFood();
-
       //agents
       calcFlockingAndSeparation();
       alignment();
       cohesion();
 
-      respawn();
+      //respawn(); // make this a GUI toggle potentially
       checkAgentDeath();
+      eatFood();
+
+      //field
+      field.moveFood();
+      field.updateFood(); //do this after we eat food
 
       //state
       setState();
@@ -265,7 +277,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   // key pressed
 
   void reset() { //reset agents
-    cout << agents.size() << endl;
     for (int i = 0; i < agents.size(); i++) {
       agents[i].reset();
     }
@@ -274,7 +285,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       agents.push_back(a);
     }
 
-    cout << "reset field" << endl;
     foodMesh.reset();
     field.resetField();
     initFoodMesh();

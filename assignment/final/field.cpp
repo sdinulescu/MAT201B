@@ -15,6 +15,7 @@ struct Food {
   int size; //size is proportional to amount of lifespan the creature gains when it is consumed
   Vec3f position;
   Vec3f velocity;
+  bool isConsumed = false;
 
   Food() { //Food constructor
     color = Color(1.0f, 0.0f, 0.0f, 1.0f);
@@ -34,30 +35,40 @@ struct Food {
   Vec3f getPosition() { return position; }
   Color getColor() { return color; }
   int getSize() { return size; }
+  bool isFoodConsumed() { return isConsumed; }
 };
 
 struct Field {
   const static int foodNum = 500;
-  Food food[foodNum];
+  vector<Food> food;
 
   void resetField() {
-    initFood();
+    initializeFood();
+
   }
 
   //Food
-  void initFood() {
+  void initializeFood() {
     for (int i = 0; i < foodNum; i++) {
       Food f;
-      food[i] = f;
+      food.push_back(f);
     }
   }
 
   void moveFood() {
-    for (int i = 0; i < foodNum; i++) {
+    for (int i = 0; i < food.size(); i++) {
       if (food[i].position.mag() > 1.1) {
         food[i].reset();
       } else {
-        food[i].position += food[i].velocity; //76moving at constant vel
+        food[i].position += food[i].velocity; //moving at constant vel
+      }
+    }
+  }
+
+  void updateFood() {
+    for (int i = 0; i < food.size(); i++) {
+      if (food[i].isConsumed) { //if the food is consumed, remove it from the vector
+        food.erase(food.begin() + i);
       }
     }
   }
