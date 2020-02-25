@@ -12,14 +12,14 @@ using namespace std;
 
 struct Food {
   Color color;
-  int size; //size is proportional to amount of lifespan the creature gains when it is consumed
+  float size; //size is proportional to amount of lifespan the creature gains when it is consumed
   Vec3f position;
   Vec3f velocity;
   bool isConsumed = false;
 
   Food() { //Food constructor
-    color = Color(1.0f, 0.0f, 0.0f, 1.0f);
-    size = 1 + rnd::uniform() * 10; //at least a size of 1
+    color = Color(rnd::uniform(), rnd::uniform(), rnd::uniform());
+    size = rnd::uniform(); //at least a size of 1
     position = Vec3f( rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  );
     velocity = Vec3f(  rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  ) * 0.001;
     //cout << " size: " << size << " position: " << position << " velocity: " << velocity << endl;
@@ -34,7 +34,7 @@ struct Food {
 
   Vec3f getPosition() { return position; }
   Color getColor() { return color; }
-  int getSize() { return size; }
+  float getSize() { return size; }
   bool isFoodConsumed() { return isConsumed; }
 };
 
@@ -77,12 +77,12 @@ struct Field {
 
   void addFood() {
     int foodToAdd = rnd::uniform() * 100;
-    cout << "adding " << foodToAdd << " food!" << endl;
+    //cout << "adding " << foodToAdd << " food!" << endl;
     for (int i = 0; i < foodToAdd; i++) {
       Food f;
       food.push_back(f);
     }
-    cout << "new food size: " << food.size() << endl;
+    //cout << "new food size: " << food.size() << endl;
   }
 
   int getAmountOfFood() {

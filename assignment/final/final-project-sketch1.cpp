@@ -85,7 +85,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     for(int i = 0; i < field.getAmountOfFood(); i++) {
       foodMesh.vertex(field.food[i].getPosition());
       foodMesh.color(field.food[i].getColor());
-      foodMesh.texCoord(field.food[i].getSize());
+      foodMesh.texCoord(field.food[i].getSize(), 0);
     }
   }
 
@@ -136,7 +136,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void respawnFood() { // TO DO: only respawn food if something is triggered in the environment
     int foodThreshold = 100;
     if (field.getAmountOfFood() < foodThreshold) { //if there are less than 50 food particles in the field
-    cout << "food is under " << foodThreshold << endl;
+    //cout << "food is under " << foodThreshold << endl;
       field.addFood();
     }
   }
@@ -248,12 +248,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void visualizeFood() { //update the mesh
     foodMesh.reset();
-    for (int i = 0; i < field.getAmountOfFood(); i++) {
-      //cout << "food pos: " << field.food[i].getPosition() << endl;
-      //cout << "food col: " << foodMesh.colors()[i].rgb(). << endl;
-      foodMesh.vertex(field.food[i].getPosition());
-      foodMesh.color(field.food[i].getColor());
-    }
+    initFoodMesh();
   }
 
   //***********************************************************************
@@ -324,8 +319,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void renderFood(Graphics& g) {
     //food shader
     g.shader(foodShader);
-    g.shader().uniform("pointSize", state().size * 0.03);
-    cout << "renderFood" << endl;
+    g.shader().uniform("pointSize", state().size * 0.005);
     g.draw(foodMesh);
   }
 
@@ -335,9 +329,9 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     gl::blending(true);      // or g.blending(true);
     //gl::blendTrans();        // or g.blendModeTrans();
 
-    //renderFood(g);
-    gl::pointSize(state().size * 3);
-    g.draw(foodMesh);
+    renderFood(g);
+    //gl::pointSize(state().size * 3);
+    //g.draw(foodMesh);
 
     renderAgents(g);
 
