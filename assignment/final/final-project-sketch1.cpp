@@ -30,13 +30,21 @@ const int AGENT_NUM = 1000;
 vector<Agent> agents;
 
 class MyApp : public DistributedAppWithState<SharedState>  {
+  bool freeze = false;
+
   //Gui params
-  Parameter moveRate{"/moveRate", "", 0.35, "", 0.0, 2.0};
-  Parameter turnRate{"/turnRate", "", 0.15, "", 0.0, 2.0};
-  Parameter localRadius{"/localRadius", "", 0.6, "", 0.01, 0.9};
-  Parameter separationDistance{"/separationDistance", "", 0.15, "", 0.01, 0.9};
+  //flocking params
+  Parameter moveRate{"/moveRate", "", 1.03, "", 0.0, 2.0};
+  Parameter turnRate{"/turnRate", "", 1.35, "", 0.0, 2.0};
+  Parameter localRadius{"/localRadius", "", 0.419, "", 0.01, 0.9};
+  Parameter separationDistance{"/separationDistance", "", 0.158, "", 0.01, 0.9};
   Parameter size{"/size", "", 1.0, "", 0.0, 2.0};
   Parameter ratio{"/ratio", "", 1.0, "", 0.0, 2.0};
+  //evolution params
+  Parameter reproductionDistanceThreshold{"/reproductionDistanceThreshold", "", 0.84, "", 0.0, 1.0};
+  Parameter foodDistanceThreshold{"/foodDistanceThreshold", "", 0.1, "", 0.0, 1.0};
+  Parameter decreaseLifespanAmount{"/decreaseLifespanAmount", "", 0.03, "", 0.0, 1.0};
+
   ControlGUI gui;
 
   std::shared_ptr<CuttleboneStateSimulationDomain<SharedState>>
@@ -65,7 +73,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void initGuiAndPassParams() {
     //gui
-    gui << moveRate << turnRate << localRadius << separationDistance << size << ratio;
+    gui << moveRate << turnRate << localRadius << separationDistance << size << ratio << reproductionDistanceThreshold << foodDistanceThreshold << decreaseLifespanAmount;
     gui.init();
   }
 
@@ -77,7 +85,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       agentMesh.vertex(a.pos());
       agentMesh.normal(a.uf());
       const Vec3f& up(a.uu());
-      agentMesh.color(up.x, up.y, up.z);
+      agentMesh.color(up.x, up.y, up.z, a.colorTransparency);
     }
   }
 
@@ -124,7 +132,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     for (int i = 0; i < agents.size(); i++) { //check each of the agents
       for (int j = 0; j < field.food.size(); j++) { //chech each of the food particles
         float distance = Vec3f(agents[i].pos() - field.food[j].getPosition()).mag();
-        if (distance < 0.1) { //if the agent is this close to the food particle
+        if (distance < foodDistanceThreshold) { //if the agent is this close to the food particle
           //cout << "food @ index " << i << " consumed!" << endl;
           field.food[j].isConsumed = true;
           agents[i].increaseLifespan(field.food[j].getSize()); //increase agent's lifespan by the food size
@@ -133,6 +141,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
+  // **************** CHANGE ****************
   void respawnFood() { // TO DO: only respawn food if something is triggered in the environment
     int foodThreshold = 100;
     if (field.getAmountOfFood() < foodThreshold) { //if there are less than 50 food particles in the field
@@ -144,7 +153,51 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //TO DO!!
   //reproduce between two boids
   void reproduce() { 
+    //go through and roll for all agents -> reproduction
+    int boidReproductionCount = 0;
+    for (int i = 0; i < agents.size(); i++) {
+      agents[i].checkReproduction();
+      if (agents[i].canReproduce) {
+        boidReproductionCount++;
+      }
+    }
+    //cout << "boids that can reproduce: " << boidReproductionCount << endl;
+    int newAgentCount = 0;
 
+    for (int i = 0; i < agents.size(); i++) {
+      if (agents[i].canReproduce) {
+        //check nearest neighbor
+        for (int j = i + 1; j < agents.size(); j++) {
+          if (agents[j].canReproduce) {
+            float distance = Vec3f(  agents[j].pos() - agents[i].pos()  ).mag(); //check their distance
+            if (distance < reproductionDistanceThreshold) { //if they are close, reproduce
+              if (newAgentCount < (MAX_AGENT_NUM - agents.size())) {
+                newAgentCount++;
+                //cout << "reproduced!" << endl;
+                Vec3f p = (  agents[i].pos() + agents[j].pos()  ) / 2;
+                Vec3f o = (  agents[i].uf() + agents[j].uf()  ) / 2;
+                Vec3f h = (  agents[i].heading + agents[j].heading  ) / 2;
+                Vec3f c = (  agents[i].center + agents[j].center  ) / 2;
+                float l = (  agents[i].getLifespan() + agents[j].getLifespan()  ) / 2;
+                Agent a(p, o, h, c, l);
+                agents.push_back(a);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    //reset reproduction boolean
+    for (int i = 0; i < agents.size(); i++) {
+      agents[i].canReproduce = false;
+    }
+    //cout << "new agents this cycle: " << newAgentCount << endl;
+    //cout << "--------------------" << endl;
+  }
+
+  void fitnessFunction() {
+    
   }
 
   //check if the agent is dead
@@ -166,9 +219,10 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
+  //flocking
   void calcFlockingAndSeparation() {
     for (unsigned i = 0; i < agents.size(); i++) {
-      agents[i].decreaseLifespan(0.1);
+      agents[i].decreaseLifespan(decreaseLifespanAmount);
       Vec3f avgHeading(0, 0, 0);
       Vec3f centerPos(0, 0, 0);
       agents[i].flockCount = 0; //reset flock count
@@ -195,14 +249,12 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
-  //flocking
   void alignment() {
     for (unsigned i = 0; i < agents.size(); i++) {
       agents[i].faceToward(agents[i].heading.normalize()); // point agents in the direction of their heading
     }
   }
 
-  //flocking
   void cohesion() {
     for (unsigned i = 0; i < agents.size(); i++) {
       agents[i].pos().lerp(agents[i].center.normalize() + agents[i].uf(), moveRate * 0.02);
@@ -214,12 +266,12 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     //copy simulation agents into drawable agents for rendering
     //cout << agents.size() << endl;
     for (unsigned i = 0; i < agents.size(); i++) {
-      DrawableAgent a(agents[i].pos(), agents[i].uf(), agents[i].uu());
+      DrawableAgent a(agents[i].pos(), agents[i].uf(), agents[i].uu(), agents[i].colorTransparency);
       state().dAgents[i] = a;
     }
     if (agents.size() < AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
       for (int i = agents.size(); i < AGENT_NUM; i++) {
-        DrawableAgent a(Vec3f(0, 0, 0), Vec3f(0, 0, 0), Vec3f(0, 0, 0));
+        DrawableAgent a(Vec3f(0, 0, 0), Vec3f(0, 0, 0), Vec3f(0, 0, 0), 0.0f);
         state().dAgents[i] = a;
       }
     }
@@ -237,11 +289,12 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       agentMesh.vertices()[i] = state().dAgents[i].position;
       agentMesh.normals()[i] = state().dAgents[i].forward;
       const Vec3d& up(state().dAgents[i].up);
-      agentMesh.colors()[i].set(up.x, up.y, up.z);
+      agentMesh.colors()[i].set(up.x, up.y, up.z, state().dAgents[i].colorTransparency);
+      //cout << "color " << state().dAgents[i].colorTransparency << endl;
     }
     if (agents.size() < AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
       for (int i = agents.size(); i < AGENT_NUM; i++) {
-        agentMesh.colors()[i].set(0, 0, 0); //don't draw that agent
+        agentMesh.colors()[i].set(0.0f, 0.0f, 0.0f, 0.0f); //don't draw that agent
       }
     }
   }
@@ -255,30 +308,34 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //update loop
 
   void onAnimate(double dt) override {
-    if (cuttleboneDomain->isSender()) {
-      //update the food
-      respawnFood();
+    if (freeze == false) {
+      if (cuttleboneDomain->isSender()) {
+        //update the food
+        respawnFood();
 
-      //update agents
-      calcFlockingAndSeparation();
-      alignment();
-      cohesion();
+        //update agents
+        calcFlockingAndSeparation();
+        alignment();
+        cohesion();
 
-      //respawn(); // make this a GUI toggle potentially
+        reproduce();
 
-      checkAgentDeath();
-      eatFood();
+        respawn(); // make this a GUI toggle potentially
 
-      //update field
-      field.moveFood();
-      field.updateFood(); //do this after we eat food
+        checkAgentDeath();
+        eatFood();
 
-      //state
-      setState();
-    } else {  nav().set(state().cameraPose);  }
+        //update field
+        field.moveFood();
+        field.updateFood(); //do this after we eat food
 
-    visualizeAgents();
-    visualizeFood();
+        //state
+        setState();
+      } else {  nav().set(state().cameraPose);  }
+
+      visualizeAgents();
+      visualizeFood();
+    }
   }
 
   //***********************************************************************
@@ -301,6 +358,9 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   bool onKeyDown(const Keyboard& k) override {
     if (k.key() == 'r') {
       reset();
+    }
+    if (k.key() == ' ') {
+      freeze = !freeze;
     }
     return true;
   }

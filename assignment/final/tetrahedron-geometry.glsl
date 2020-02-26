@@ -7,6 +7,7 @@ in Vertex {
   vec3 position;
   vec3 forward;
   vec3 up;
+  float transparency;
 }
 vertex[];
 
@@ -40,6 +41,7 @@ void main() {
   vec3 position = vertex[0].position;
   vec3 forward = vertex[0].forward * size;
   vec3 up = vertex[0].up;
+  float t = vertex[0].transparency;
 
   vec3 over = cross(up, forward) * ratio;
 
@@ -48,56 +50,56 @@ void main() {
       pm *
       vec4(position +
                (rotationMatrix(forward, radians(60)) * vec4(over, 0.0)).xyz,
-           1.0);
+           1.0f);
   vec4 c =
       pm *
       vec4(position +
                (rotationMatrix(forward, radians(180)) * vec4(over, 0.0)).xyz,
-           1.0);
+           1.0f);
   vec4 d =
       pm *
       vec4(position +
                (rotationMatrix(forward, radians(300)) * vec4(over, 0.0)).xyz,
-           1.0);
+           1.0f);
 
   gl_Position = a;
-  fragment.color = vec4(1.0, 1.0, 1.0, 1.0);
+  fragment.color = vec4(1.0, 1.0, 1.0, t);
   EmitVertex();
 
   gl_Position = b;
-  fragment.color = vec4(1.0, 0.0, 0.0, 0.2);
+  fragment.color = vec4(1.0, 0.0, 0.0, t);
   EmitVertex();
 
   gl_Position = c;
-  fragment.color = vec4(0.0, 1.0, 0.0, 0.2);
+  fragment.color = vec4(0.0, 1.0, 0.0, t);
   EmitVertex();
 
   EndPrimitive();
 
   gl_Position = a;
-  fragment.color = vec4(1.0, 1.0, 1.0, 1.0);
+  fragment.color = vec4(1.0, 1.0, 1.0, t);
   EmitVertex();
 
   gl_Position = c;
-  fragment.color = vec4(0.0, 1.0, 0.0, 0.2);
+  fragment.color = vec4(0.0, 1.0, 0.0, t);
   EmitVertex();
 
   gl_Position = d;
-  fragment.color = vec4(0.0, 0.0, 1.0, 0.2);
+  fragment.color = vec4(0.0, 0.0, 1.0, t);
   EmitVertex();
 
   EndPrimitive();
 
   gl_Position = a;
-  fragment.color = vec4(1.0, 1.0, 1.0, 1.0);
+  fragment.color = vec4(1.0, 1.0, 1.0, t);
   EmitVertex();
 
   gl_Position = d;
-  fragment.color = vec4(0.0, 0.0, 1.0, 0.2);
+  fragment.color = vec4(0.0, 0.0, 1.0, t);
   EmitVertex();
 
   gl_Position = b;
-  fragment.color = vec4(1.0, 0.0, 0.0, 0.2);
+  fragment.color = vec4(1.0, 0.0, 0.0, t);
   EmitVertex();
 
   EndPrimitive();
