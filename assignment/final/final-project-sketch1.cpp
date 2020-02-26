@@ -259,6 +259,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void cohesion() {
     for (unsigned i = 0; i < agents.size(); i++) {
       agents[i].pos().lerp(agents[i].center.normalize() + agents[i].uf(), moveRate * 0.02);
+      agents[i].faceToward(agents[i].center.normalize() + agents[i].uf());
     }
   }
 
