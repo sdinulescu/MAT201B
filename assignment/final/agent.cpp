@@ -44,7 +44,7 @@ struct Agent : Pose {
     heading = Vec3f(rnd::uniform(), rnd::uniform(), rnd::uniform());
     center = Vec3f(rnd::uniform(), rnd::uniform(), rnd::uniform());
     lifespan = rnd::uniform() * 10.0f;
-    colorTransparency = 1.0f;
+    colorTransparency = lifespan * 0.1;
     fitnessValue = 0.0f;
     canReproduce = false;
   }

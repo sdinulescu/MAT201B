@@ -85,6 +85,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       agentMesh.vertex(a.pos());
       agentMesh.normal(a.uf());
       const Vec3f& up(a.uu());
+      cout << a.colorTransparency << endl;
       agentMesh.color(up.x, up.y, up.z, a.colorTransparency);
     }
   }
@@ -387,12 +388,9 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     g.clear(state().background, state().background, state().background);
     gl::depthTesting(true);  // or g.depthTesting(true);
     gl::blending(true);      // or g.blending(true);
-    //gl::blendTrans();        // or g.blendModeTrans();
+    gl::blendTrans();        // or g.blendModeTrans();
 
     renderFood(g);
-    //gl::pointSize(state().size * 3);
-    //g.draw(foodMesh);
-
     renderAgents(g);
 
     if (cuttleboneDomain->isSender()) {
