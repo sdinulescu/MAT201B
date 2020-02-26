@@ -66,16 +66,14 @@ struct Agent : Pose {
     colorTransparency = lifespan * 0.1;
   }
 
-  bool checkReproduction() {
+  bool checkReproduction(float reproductionProbabilityThreshold) {
     if (lifespan < (rnd::uniform() * 10)) {
       //roll for probability of reproduction
       float reproductionProbability = rnd::uniform();
       reproductionProbability += fitnessValue; // boids with a greater fitness value have a higher reproductive chance
       
-      //TO DO possibly: make this a GUI param
-      float reproductionThreshold = 0.9;
       //cout << reproductionProbability << " " << reproductionThreshold << endl;
-      if (reproductionProbability > reproductionThreshold) { //random chance to reproduce
+      if (reproductionProbability > reproductionProbabilityThreshold) { //random chance to reproduce
         canReproduce = true;
       }
     }

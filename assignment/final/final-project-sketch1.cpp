@@ -34,16 +34,17 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   //Gui params
   //flocking params
-  Parameter moveRate{"/moveRate", "", 1.03, "", 0.0, 2.0};
-  Parameter turnRate{"/turnRate", "", 1.35, "", 0.0, 2.0};
-  Parameter localRadius{"/localRadius", "", 0.419, "", 0.01, 0.9};
-  Parameter separationDistance{"/separationDistance", "", 0.158, "", 0.01, 0.9};
+  Parameter moveRate{"/moveRate", "", 0.5, "", 0.0, 2.0};
+  Parameter turnRate{"/turnRate", "", 2.0, "", 0.0, 2.0};
+  Parameter localRadius{"/localRadius", "", 0.3, "", 0.01, 0.9};
+  Parameter separationDistance{"/separationDistance", "", 0.1, "", 0.01, 0.9};
   Parameter size{"/size", "", 1.0, "", 0.0, 2.0};
   Parameter ratio{"/ratio", "", 1.0, "", 0.0, 2.0};
   //evolution params
-  Parameter reproductionDistanceThreshold{"/reproductionDistanceThreshold", "", 0.84, "", 0.0, 1.0};
+  Parameter reproductionDistanceThreshold{"/reproductionDistanceThreshold", "", 0.3, "", 0.0, 1.0};
   Parameter foodDistanceThreshold{"/foodDistanceThreshold", "", 0.1, "", 0.0, 1.0};
   Parameter decreaseLifespanAmount{"/decreaseLifespanAmount", "", 0.03, "", 0.0, 1.0};
+  Parameter reproductionProbabilityThreshold{"/reproductionProbabilityThreshold", "", 0.7, "", 0.0, 1.0};
 
   ControlGUI gui;
 
@@ -73,7 +74,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void initGuiAndPassParams() {
     //gui
-    gui << moveRate << turnRate << localRadius << separationDistance << size << ratio << reproductionDistanceThreshold << foodDistanceThreshold << decreaseLifespanAmount;
+    gui << moveRate << turnRate << localRadius << separationDistance << size << ratio << reproductionDistanceThreshold << foodDistanceThreshold << decreaseLifespanAmount << reproductionProbabilityThreshold;
     gui.init();
   }
 
@@ -156,7 +157,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     //go through and roll for all agents -> reproduction
     int boidReproductionCount = 0;
     for (int i = 0; i < agents.size(); i++) {
-      agents[i].checkReproduction();
+      agents[i].checkReproduction(reproductionProbabilityThreshold);
       if (agents[i].canReproduce) {
         boidReproductionCount++;
       }
@@ -218,6 +219,11 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         }
     }
   }
+  void wrapAgentPositions() {
+    for (unsigned i = 0; i < agents.size(); i++) {
+
+    }
+  }
 
   //flocking
   void calcFlockingAndSeparation() {
@@ -227,19 +233,21 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       Vec3f centerPos(0, 0, 0);
       agents[i].flockCount = 0; //reset flock count
       for (unsigned j = 1 + i; j < agents.size(); j++) {
-          float distance = (agents[j].pos() - agents[i].pos()).mag();
+        float distance = (agents[j].pos() - agents[i].pos()).mag();
           
-          if (distance < localRadius) { 
+        if (distance < localRadius) { 
           //calculate alignment and cohesion vals if flock mates are far enough away from each other
           agents[i].flockCount++; //increase the flockmate count for that specific agent
+          avgHeading += agents[j].uf();
+          centerPos += agents[j].pos();
           if (distance < separationDistance) {
               //cout << "separate" << endl;
-              agents[i].pos() -= agents[j].uf().normalize() * turnRate * 0.002;
+              agents[i].pos() -= agents[j].uf().normalize() * moveRate * 0.002;
           } else {
-              avgHeading += agents[j].uf();
-              centerPos += agents[j].pos();
+              // avgHeading += agents[j].uf();
+              // centerPos += agents[j].pos();
           }
-          } 
+        } 
       }
 
       if (agents[i].flockCount > 0) {
@@ -249,16 +257,10 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
-  void alignment() {
+  void alignmentAndCohesion() {
     for (unsigned i = 0; i < agents.size(); i++) {
-      agents[i].faceToward(agents[i].heading.normalize()); // point agents in the direction of their heading
-    }
-  }
-
-  void cohesion() {
-    for (unsigned i = 0; i < agents.size(); i++) {
+      agents[i].faceToward( (agents[i].heading + agents[i].center + agents[i].uf()).normalize() * turnRate); // point agents in the direction of their heading
       agents[i].pos().lerp(agents[i].center.normalize() + agents[i].uf(), moveRate * 0.02);
-      agents[i].faceToward(agents[i].center.normalize() + agents[i].uf());
     }
   }
 
@@ -316,12 +318,11 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
         //update agents
         calcFlockingAndSeparation();
-        alignment();
-        cohesion();
+        alignmentAndCohesion();
 
         reproduce();
 
-        //respawn(); // make this a GUI toggle potentially
+        respawn(); // make this a GUI toggle potentially
 
         checkAgentDeath();
         eatFood();
