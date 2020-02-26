@@ -85,7 +85,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       agentMesh.vertex(a.pos());
       agentMesh.normal(a.uf());
       const Vec3f& up(a.uu());
-      cout << a.colorTransparency << endl;
       agentMesh.color(up.x, up.y, up.z, a.colorTransparency);
     }
   }
@@ -322,7 +321,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
         reproduce();
 
-        respawn(); // make this a GUI toggle potentially
+        //respawn(); // make this a GUI toggle potentially
 
         checkAgentDeath();
         eatFood();

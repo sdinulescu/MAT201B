@@ -37,6 +37,9 @@ struct Agent : Pose {
     heading = h;
     center = c;
     lifespan = l;
+    colorTransparency = lifespan * 0.1;
+    canReproduce = false;
+    fitnessValue = 0.0f;
   }
   void reset() { //give agents a pos and a forward
     pos(randomVec3f());

@@ -39,7 +39,7 @@ mat4 rotationMatrix(vec3 axis, float angle) {
 void main() {
   mat4 pm = al_ProjectionMatrix * al_ModelViewMatrix;
   vec3 position = vertex[0].position;
-  vec3 forward = vertex[0].forward * size;
+  vec3 forward = vertex[0].forward * size / (0.1 + vertex[0].transparency); 
   vec3 up = vertex[0].up;
   float t = vertex[0].transparency;
 
