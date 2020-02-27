@@ -99,26 +99,17 @@ struct Field {
   }
 };
 
-// struct DrawableFood {
-//   Color color;
-//   int size; //size is proportional to amount of lifespan the creature gains when it is consumed
-//   Vec3f position;
+struct DrawableFood {
+  Color color;
+  int size; //size is proportional to amount of lifespan the creature gains when it is consumed
+  Vec3f position;
 
-//   DrawableFood() {}
+  DrawableFood() {}
 
-//   DrawableFood(Vec3f p, int s, Color c) {
-//     position = p;
-//     size = s;
-//     color = c;
-//   }
-// };
-
-// struct DrawableField {
-//   DrawableFood dFood[1000];
-
-//   DrawableField(int arrSize, Food& f) {
-     
-//   }
-
-// };
+  DrawableFood(Vec3f p, int s, Color c) {
+    position = p;
+    size = s;
+    color = c;
+  }
+};
 

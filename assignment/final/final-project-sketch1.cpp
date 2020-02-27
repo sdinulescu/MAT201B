@@ -26,7 +26,8 @@ using namespace std;
 string slurp(string fileName); 
 
 //global vars/containers
-const int AGENT_NUM = 1000;
+//const int AGENT_NUM = 1000;
+//const int FOOD_NUM = 500;
 vector<Agent> agents;
 
 class MyApp : public DistributedAppWithState<SharedState>  {
@@ -79,7 +80,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void initAgents() {
-    for (int i = agents.size(); i < AGENT_NUM; i++) {
+    for (int i = agents.size(); i < MAX_AGENT_NUM; i++) {
       Agent a;
       agents.push_back(a);
       
@@ -273,12 +274,29 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       DrawableAgent a(agents[i].pos(), agents[i].uf(), agents[i].uu(), agents[i].colorTransparency);
       state().dAgents[i] = a;
     }
-    if (agents.size() < AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
-      for (int i = agents.size(); i < AGENT_NUM; i++) {
+    if (agents.size() < MAX_AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
+      for (int i = agents.size(); i < MAX_AGENT_NUM; i++) {
         DrawableAgent a(Vec3f(0, 0, 0), Vec3f(0, 0, 0), Vec3f(0, 0, 0), 0.0f);
         state().dAgents[i] = a;
       }
     }
+
+    //set the environment
+    //cout << field.food.size() << endl;
+    for (unsigned i = 0; i < field.food.size(); i++) {
+      //copy all the new food positions
+      //cout << field.food[i].getPosition() << " ";
+      DrawableFood f(field.food[i].getPosition(), field.food[i].getSize(), field.food[i].getColor());
+      state().dFood[i] = f;
+    }
+    if (field.food.size() < MAX_FOOD_NUM) { // if the vector is smaller than the Drawable Agent array capacity
+      //cout << "less food" << endl;
+      for (int i = field.food.size(); i < MAX_FOOD_NUM; i++) {
+        DrawableFood f(Vec3f(0, 0, 0), 0, Color(0, 0, 0, 0));
+        state().dFood[i] = f;
+      }
+    }
+
 
     //set the other state vars
     state().cameraPose.set(nav());
@@ -296,16 +314,25 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       agentMesh.colors()[i].set(up.x, up.y, up.z, state().dAgents[i].colorTransparency);
       //cout << "color " << state().dAgents[i].colorTransparency << endl;
     }
-    if (agents.size() < AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
-      for (int i = agents.size(); i < AGENT_NUM; i++) {
+    if (agents.size() < MAX_AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
+      for (int i = agents.size(); i < MAX_AGENT_NUM; i++) {
         agentMesh.colors()[i].set(0.0f, 0.0f, 0.0f, 0.0f); //don't draw that agent
       }
     }
   }
 
   void visualizeFood() { //update the mesh
-    foodMesh.reset();
-    initFoodMesh();
+    //foodMesh.reset();
+    for (unsigned i = 0; i < MAX_FOOD_NUM; i++) {
+      foodMesh.vertices()[i] = state().dFood[i].position;
+      foodMesh.colors()[i].set(state().dFood[i].color.r, state().dFood[i].color.g, state().dFood[i].color.b);
+      foodMesh.texCoord(state().dFood[i].size, 0);
+      //cout << foodMesh.vertices()[i] << endl;
+    }
+
+    
+    //foodMesh.reset();
+    //initFoodMesh();
   }
 
   //***********************************************************************
@@ -348,7 +375,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     for (int i = 0; i < agents.size(); i++) {
       agents[i].reset();
     }
-    for (int i = agents.size(); i < AGENT_NUM; i++) {
+    for (int i = agents.size(); i < MAX_AGENT_NUM; i++) {
       Agent a; 
       agents.push_back(a);
     }
