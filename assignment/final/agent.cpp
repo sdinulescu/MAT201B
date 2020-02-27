@@ -27,25 +27,29 @@ struct Agent : Pose {
   //flocking attributes
   Vec3f heading; //heading from POV of agent (sum of all the headings, then divide by the count)
   Vec3f center;  // position in worldspace (sum of all the positions, then divide by the count)
+  Vec3f randomFlocking;
   unsigned flockCount{1};
 
   //methods
   Agent() { reset(); } //constructor, initialize with a position and a forward
-  Agent(Vec3f p, Vec3f o, Vec3f h, Vec3f c, float l) {
+  Agent(Vec3f p, Vec3f o, Vec3f h, Vec3f c, Vec3f r, float l) {
     pos(p);
     faceToward(o);
     heading = h;
     center = c;
+    randomFlocking = r;
     lifespan = l;
     colorTransparency = lifespan * 0.1;
     canReproduce = false;
     fitnessValue = 0.0f;
+    randomFlocking = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
   }
   void reset() { //give agents a pos and a forward
     pos(randomVec3f());
     faceToward(randomVec3f());
-    heading = Vec3f(rnd::uniform(), rnd::uniform(), rnd::uniform());
-    center = Vec3f(rnd::uniform(), rnd::uniform(), rnd::uniform());
+    randomFlocking = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
+    //heading = Vec3f(rnd::uniform(), rnd::uniform(), rnd::uniform());
+    //center = Vec3f(rnd::uniform(), rnd::uniform(), rnd::uniform());
     lifespan = rnd::uniform() * 10.0f;
     colorTransparency = lifespan * 0.1;
     fitnessValue = 0.0f;
