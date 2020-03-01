@@ -20,23 +20,31 @@ struct Agent : Pose {
   
   float lifespan; // agents die after a certain point
   bool canReproduce;
-  float fitnessValue;
-
   float colorTransparency;
 
   //flocking attributes
   Vec3f heading; //heading from POV of agent (sum of all the headings, then divide by the count)
-  Vec3f center;  // position in worldspace (sum of all the positions, then divide by the count)
-  Vec3f randomFlocking;
+  Vec3f center;  //position in worldspace (sum of all the positions, then divide by the count)
+  
+  //these get inherited
+  //adds individuality to each agent, fitness is evaluated
+  Vec3f randomFlocking; 
+  Vec3f moveRate;
+  Vec3f turnRate;
+
+  float fitnessValue;
+
   unsigned flockCount{1};
 
   //methods
   Agent() { reset(); } //constructor, initialize with a position and a forward
-  Agent(Vec3f p, Vec3f o, Vec3f h, Vec3f c, Vec3f r, float l) {
+  Agent(Vec3f p, Vec3f o, Vec3f h, Vec3f c, Vec3f m, Vec3f t, Vec3f r, float l) {
     pos(p);
     faceToward(o);
     heading = h;
     center = c;
+    moveRate = m;
+    turnRate = t;
     randomFlocking = r;
     lifespan = l;
     colorTransparency = lifespan * 0.1;
@@ -48,6 +56,8 @@ struct Agent : Pose {
     pos(randomVec3f());
     faceToward(randomVec3f());
     randomFlocking = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
+    moveRate = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
+    turnRate = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
     //heading = Vec3f(rnd::uniform(), rnd::uniform(), rnd::uniform());
     //center = Vec3f(rnd::uniform(), rnd::uniform(), rnd::uniform());
     lifespan = rnd::uniform() * 10.0f;
@@ -87,6 +97,11 @@ struct Agent : Pose {
     if (fitnessValue < fitnessCutoff)  {
       lifespan = 0;
     }
+  }
+
+  void evaluateFitness() {
+    float fitnessPoints;
+    fitnessValue = fitnessPoints;
   }
 };
 
