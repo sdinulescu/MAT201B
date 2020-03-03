@@ -26,8 +26,6 @@ using namespace std;
 string slurp(string fileName); 
 
 //global vars/containers
-//const int AGENT_NUM = 1000;
-//const int FOOD_NUM = 500;
 const float FITNESS_CUTOFF = 10.0;
 vector<Agent> agents;
 
@@ -250,11 +248,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         }
     }
   }
-  void wrapAgentPositions() {
-    for (unsigned i = 0; i < agents.size(); i++) {
-
-    }
-  }
 
   //flocking
   void calcFlockingAndSeparation() {
@@ -326,7 +319,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       }
     }
 
-
     //set the other state vars
     state().cameraPose.set(nav());
     state().background = 0.1;
@@ -351,17 +343,11 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void visualizeFood() { //update the mesh
-    //foodMesh.reset();
     for (unsigned i = 0; i < MAX_FOOD_NUM; i++) {
       foodMesh.vertices()[i] = state().dFood[i].position;
       foodMesh.colors()[i].set(state().dFood[i].color.r, state().dFood[i].color.g, state().dFood[i].color.b);
       foodMesh.texCoord(state().dFood[i].size, 0);
-      //cout << foodMesh.vertices()[i] << endl;
     }
-
-    
-    //foodMesh.reset();
-    //initFoodMesh();
   }
 
   //***********************************************************************

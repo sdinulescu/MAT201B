@@ -112,4 +112,3 @@ struct DrawableFood {
     color = c;
   }
 };
-
