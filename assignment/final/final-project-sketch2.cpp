@@ -191,13 +191,13 @@ class MyApp : public DistributedAppWithState<SharedState>  {
               if (newAgentCount < (MAX_AGENT_NUM - agents.size())) {
                 newAgentCount++;
                 //cout << "reproduced!" << endl;
-                Vec3f p = (  agents[i].pos() + agents[j].pos()  ) / 2;
-                Vec3f o = (  agents[i].uf() + agents[j].uf()  ) / 2;
-                Vec3f h = (  agents[i].heading + agents[j].heading  ) / 2;
-                Vec3f c = (  agents[i].center + agents[j].center  ) / 2;
-                Vec3f m = (  agents[i].moveRate + agents[j].moveRate  ) / 2;
-                Vec3f t = (  agents[i].turnRate + agents[j].turnRate  ) / 2;
-                Vec3f r = (  agents[i].randomFlocking + agents[j].randomFlocking  )/2;
+                Vec3f p = Vec3f(  agents[i].pos() + agents[j].pos()  ) / 2;
+                Vec3f o = Vec3f(  agents[i].uf() + agents[j].uf()  ) / 2;
+                Vec3f h = Vec3f(  agents[i].heading + agents[j].heading  ) / 2;
+                Vec3f c = Vec3f(  agents[i].center + agents[j].center  ) / 2;
+                Vec3f m = Vec3f(  agents[i].moveRate + agents[j].moveRate  ) / 2;
+                Vec3f t = Vec3f(  agents[i].turnRate + agents[j].turnRate  ) / 2;
+                Vec3f r = Vec3f(  agents[i].randomFlocking + agents[j].randomFlocking  )/2;
                 float l = (  agents[i].getLifespan() + agents[j].getLifespan()  ) / 2;
                 Agent a(p, o, h, c, m, t, r, l);
                 agents.push_back(a);
