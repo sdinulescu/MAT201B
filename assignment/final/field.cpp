@@ -10,7 +10,7 @@
 using namespace al;
 using namespace std;
 
-struct Food {
+struct Food { //food in the field
   Color color;
   float size; //size is proportional to amount of lifespan the creature gains when it is consumed
   Vec3f position;
@@ -35,7 +35,7 @@ struct Food {
   bool isFoodConsumed() { return isConsumed; }
 };
 
-struct Force {
+struct Force { //forces in the field
   Vec3f position;
   Vec3f attractionMagnitude;
   Vec3f travelVelocity;
@@ -122,6 +122,9 @@ struct Field {
   }
 };
 
+//**************************
+//to be passed to renderers
+//**************************
 struct DrawableFood {
   Color color;
   int size; //size is proportional to amount of lifespan the creature gains when it is consumed

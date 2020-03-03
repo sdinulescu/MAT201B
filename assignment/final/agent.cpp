@@ -19,8 +19,8 @@ struct Agent : Pose {
   //Agents have a unit forward vector, which is inherited from Pose -> .uf()
   
   float lifespan; // agents die after a certain point
-  bool canReproduce;
-  float colorTransparency;
+  bool canReproduce; //true if it can reproduce, false if it can't
+  float colorTransparency; //sets the alpha value per agent
 
   //flocking attributes
   Vec3f heading; //heading from POV of agent (sum of all the headings, then divide by the count)
@@ -28,16 +28,16 @@ struct Agent : Pose {
   
   //these get inherited
   //adds individuality to each agent, fitness is evaluated
-  Vec3f randomFlocking; 
-  Vec3f moveRate;
-  Vec3f turnRate;
+  Vec3f randomFlocking; //random direction parameter
+  Vec3f moveRate; //how fast they move
+  Vec3f turnRate; //how fast they turn to a new direction
 
-  float fitnessValue;
-  float startCheckingFitness;
+  float fitnessValue; //keeps track of an agent's "fitness" -> higher is better
+  float startCheckingFitness; //when do we start keeping track of fitness? when the lifespan of the agent is less than this
 
-  unsigned flockCount{1};
+  unsigned flockCount{1}; //how many neighbors?
 
-  //methods
+  //constructors
   Agent() { reset(); } //constructor, initialize with a position and a forward
   Agent(Vec3f p, Vec3f o, Vec3f h, Vec3f c, Vec3f m, Vec3f t, Vec3f r, float l) {
     pos(p);
@@ -69,19 +69,14 @@ struct Agent : Pose {
   }
 
   //getters and setters
-  float getLifespan() {
-    return lifespan;
-  }
-
+  float getLifespan() {  return lifespan;  }
   void incrementLifespan(float amount) {
     lifespan += amount;
     colorTransparency = lifespan * 0.1;
   }
-  
-  void incrementFitness(float value) {
-    fitnessValue += value;
-  }
+  void incrementFitness(float value) {  fitnessValue += value;  }
 
+  // methods
   bool checkReproduction(float reproductionProbabilityThreshold) {
     if (lifespan < (rnd::uniform() * 10)) {
       //roll for probability of reproduction
@@ -94,7 +89,6 @@ struct Agent : Pose {
       }
     }
   }
-
   void evaluateFitness(float fitnessCutoff) {
     if (lifespan < startCheckingFitness) {
       //cout << "start checking fitness" << endl;
@@ -106,7 +100,9 @@ struct Agent : Pose {
   }
 };
 
-// This is only what we need to draw on the GPU
+//**************************
+//to be passed to renderers
+//**************************
 struct DrawableAgent {
   Vec3f position, forward; //agents have a position and a forward
   Vec3f up; //part of orientation -> which way is up?
