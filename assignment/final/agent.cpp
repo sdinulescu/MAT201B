@@ -33,6 +33,7 @@ struct Agent : Pose {
   Vec3f turnRate;
 
   float fitnessValue;
+  float startCheckingFitness;
 
   unsigned flockCount{1};
 
@@ -63,6 +64,7 @@ struct Agent : Pose {
     lifespan = rnd::uniform() * 10.0f;
     colorTransparency = lifespan * 0.1;
     fitnessValue = 0.0f;
+    startCheckingFitness = rnd::uniformS()*10;
     canReproduce = false;
   }
 
@@ -71,13 +73,13 @@ struct Agent : Pose {
     return lifespan;
   }
 
-  void decreaseLifespan(float amount) {
-    lifespan -= amount;
-    colorTransparency = lifespan * 0.1;
-  }
-  void increaseLifespan(float amount) {
+  void incrementLifespan(float amount) {
     lifespan += amount;
     colorTransparency = lifespan * 0.1;
+  }
+  
+  void incrementFitness(float value) {
+    fitnessValue += value;
   }
 
   bool checkReproduction(float reproductionProbabilityThreshold) {
@@ -93,15 +95,14 @@ struct Agent : Pose {
     }
   }
 
-  void checkFitness(float fitnessCutoff) {
-    if (fitnessValue < fitnessCutoff)  {
-      lifespan = 0;
+  void evaluateFitness(float fitnessCutoff) {
+    if (lifespan < startCheckingFitness) {
+      //cout << "start checking fitness" << endl;
+      if (fitnessValue < fitnessCutoff)  {
+        cout << "kill it, it is not fit" << endl;
+        lifespan = 0;
+      }
     }
-  }
-
-  void evaluateFitness() {
-    float fitnessPoints;
-    fitnessValue = fitnessPoints;
   }
 };
 

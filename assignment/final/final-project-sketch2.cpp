@@ -28,6 +28,7 @@ string slurp(string fileName);
 //global vars/containers
 //const int AGENT_NUM = 1000;
 //const int FOOD_NUM = 500;
+const float FITNESS_CUTOFF = 10.0;
 vector<Agent> agents;
 
 class MyApp : public DistributedAppWithState<SharedState>  {
@@ -140,7 +141,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         if (distance < foodDistanceThreshold) { //if the agent is this close to the food particle
           //cout << "food @ index " << i << " consumed!" << endl;
           field.food[j].isConsumed = true;
-          agents[i].increaseLifespan(field.food[j].getSize()); //increase agent's lifespan by the food size
+          agents[i].incrementLifespan(field.food[j].getSize()); //increase agent's lifespan by the food size
         }
       }
     }
@@ -204,8 +205,15 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     //cout << "--------------------" << endl;
   }
 
-  void fitnessFunction() {
-    
+  void assignFitness() {
+    for (int i = 0; i < agents.size(); i++) {
+      float value = 0.0;
+      if (agents[i].flockCount > 10) { //if an agent does this in regards to other flockmembers
+        value = rnd::uniformS() * agents[i].flockCount; //some random relationship, but also proportional to flockCount
+      } 
+      agents[i].incrementFitness(value); //change agent's fitness value
+      agents[i].evaluateFitness(FITNESS_CUTOFF);
+    }
   }
 
   //check if the agent is dead
@@ -235,7 +243,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //flocking
   void calcFlockingAndSeparation() {
     for (unsigned i = 0; i < agents.size(); i++) {
-      agents[i].decreaseLifespan(decreaseLifespanAmount);
+      agents[i].incrementLifespan(-1 * decreaseLifespanAmount);
       Vec3f avgHeading(0, 0, 0);
       Vec3f centerPos(0, 0, 0);
       agents[i].flockCount = 0; //reset flock count
@@ -340,9 +348,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     //initFoodMesh();
   }
 
- 
-  
-
   //***********************************************************************
   //update loop
    //frame counter 
@@ -366,6 +371,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         calcFlockingAndSeparation();
         alignmentAndCohesion();
 
+        assignFitness();
         reproduce();
 
         //respawn(); // make this a GUI toggle potentially
