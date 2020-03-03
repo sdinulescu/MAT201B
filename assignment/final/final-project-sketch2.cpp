@@ -155,7 +155,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void applyForces() {
-    for (int i = 0; i < field.forces.size(); i++) { //for each of the forces
+    for (int i = 0; i < field.numberOfForces; i++) { //for each of the forces
       for (int j = 0; j < agents.size(); j++) { //for each agent
         //if the agent's position is within the size of the force field (force position + radius)
         float distance = (agents[i].pos() - field.forces[i].position).mag();

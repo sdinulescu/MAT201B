@@ -58,8 +58,8 @@ struct Field {
 
   int amountOfFood = 500;
   vector<Food> food;
-  int numberOfForces = 3;
-  vector<Force> forces;
+  const static int numberOfForces = 2;
+  Force forces[numberOfForces];
 
   void resetField() { // initialize all things in the field
     initializeFood();
@@ -112,11 +112,11 @@ struct Field {
   void initializeForces() {
     for (int i = 0 ; i < numberOfForces; i++) {
       Force f;
-      forces.push_back(f);
+      forces[i] = f;
     }
   }
   void moveForces() {
-    for (int i = 0; i < forces.size(); i++) {
+    for (int i = 0; i < numberOfForces; i++) {
       forces[i].position += forces[i].travelVelocity;
     }
   }
