@@ -17,17 +17,14 @@ struct Food {
   Vec3f velocity;
   bool isConsumed = false;
 
-  Food() { //Food constructor
+  //Food constructor
+  Food() {  reset();  }
+
+  void reset() {
     color = Color(rnd::uniform(), rnd::uniform(), rnd::uniform());
     size = rnd::uniform(); //at least a size of 1
     position = Vec3f( rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  );
     velocity = Vec3f(  rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  ) * 0.001;
-    //cout << " size: " << size << " position: " << position << " velocity: " << velocity << endl;
-  }
-
-  void reset() {
-    Vec3f p{  rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  };
-    position = p;
   }
 
   void setSize(int s) { size = s; }
@@ -38,16 +35,39 @@ struct Food {
   bool isFoodConsumed() { return isConsumed; }
 };
 
+struct Force {
+  Vec3f position;
+  Vec3f attractionMagnitude;
+  Vec3f travelVelocity;
+
+  float radius;
+
+  //Force constructors
+  Force() {  reset();  }
+  void reset() {
+    position = Vec3f( rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  );
+    attractionMagnitude = Vec3f(  rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  );
+    travelVelocity = Vec3f(  rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  ) * 0.001;
+    radius = rnd::uniform();
+  }
+};
+
 struct Field {
+// TO DO -- flesh this out
+// include some environmental effects that can be positive or negative for agents in the surrounding area
+
   int amountOfFood = 500;
   vector<Food> food;
+  int numberOfForces = 3;
+  vector<Force> forces;
 
-  void resetField() {
+  void resetField() { // initialize all things in the field
     initializeFood();
-
+    initializeForces();
+    // TO DO: add forces and other things here
   }
 
-  //Food
+  //*********************Food*********************
   void initializeFood() {
     for (int i = 0; i < amountOfFood; i++) {
       Food f;
@@ -71,7 +91,6 @@ struct Field {
         food.erase(food.begin() + i);
       }
     }
-
     amountOfFood = food.size();
   }
 
@@ -89,13 +108,17 @@ struct Field {
     return amountOfFood;
   }
 
-  //Forces
-  void applyResistance() {
-
+  //*********************Forces*********************
+  void initializeForces() {
+    for (int i = 0 ; i < numberOfForces; i++) {
+      Force f;
+      forces.push_back(f);
+    }
   }
-
-  void applyAttraction() {
-
+  void moveForces() {
+    for (int i = 0; i < forces.size(); i++) {
+      forces[i].position += forces[i].travelVelocity;
+    }
   }
 };
 

@@ -122,10 +122,10 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     agentMesh.primitive(Mesh::POINTS);
     foodMesh.primitive(Mesh::POINTS);
 
-    field.resetField(); //initializes the field (fills the food array)
-    initFoodMesh(); //init the mesh with food vector
+    field.resetField(); //initializes the field (fills the food array, initializes forces)
+    initFoodMesh(); //init the food mesh with food vector
+    initAgents(); //init the agent mesh with agent vector
 
-    initAgents();
     nav().pos(0, 0, 3);
   }
 
@@ -154,7 +154,20 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
-  //TO DO!!
+  void applyForces() {
+    for (int i = 0; i < field.forces.size(); i++) { //for each of the forces
+      for (int j = 0; j < agents.size(); j++) { //for each agent
+        //if the agent's position is within the size of the force field (force position + radius)
+        float distance = (agents[i].pos() - field.forces[i].position).mag();
+        if (distance <= field.forces[i].radius) {
+          //cout << "applying force: " << field.forces[i].attractionMagnitude << endl;
+          //apply forces on that agent
+          agents[i].pos() += field.forces[i].attractionMagnitude; //apply the attraction magnitude
+        }
+      }
+    }
+  }
+
   //reproduce between two boids
   void reproduce() { 
     //go through and roll for all agents -> reproduction
@@ -382,8 +395,11 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         eatFood();
 
         //update field
-        field.moveFood();
-        field.updateFood(); //do this after we eat food
+        field.moveFood(); //move the food
+        field.updateFood(); //check what food was eaten and update the vector accordingly
+        field.moveForces(); //move the forces
+
+        applyForces();
 
         //state
         setState();
