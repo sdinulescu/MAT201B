@@ -99,7 +99,7 @@ struct Agent : Pose {
     if (lifespan < startCheckingFitness) {
       //cout << "start checking fitness" << endl;
       if (fitnessValue < fitnessCutoff)  {
-        cout << "kill it, it is not fit" << endl;
+        //cout << "kill it, it is not fit" << endl;
         lifespan = 0;
       }
     }

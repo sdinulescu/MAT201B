@@ -208,9 +208,25 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void assignFitness() {
     for (int i = 0; i < agents.size(); i++) {
       float value = 0.0;
-      if (agents[i].flockCount > 10) { //if an agent does this in regards to other flockmembers
-        value = rnd::uniformS() * agents[i].flockCount; //some random relationship, but also proportional to flockCount
-      } 
+      //flock count
+      if (agents[i].flockCount < 5 || agents[i].flockCount > 30) {
+        value -= rnd::uniform() * agents[i].flockCount;
+      } else {
+        value += rnd::uniform() * agents[i].flockCount; //some random relationship, but also proportional to flockCount
+      }
+      //move rate
+      if (agents[i].moveRate.mag() < 0.3 || agents[i].moveRate.mag() > 0.9) {
+        value -= rnd::uniform() * agents[i].moveRate.mag(); //some random relationship, but also dependent on magnitude of moveRate
+      } else {
+        value += rnd::uniform() * agents[i].moveRate.mag();
+      }
+      //turn rate
+      if (agents[i].turnRate.mag() < 0.3 || agents[i].turnRate.mag() > 0.9) {
+        value -= rnd::uniform() * agents[i].turnRate.mag();
+      } else {
+        value += rnd::uniform() * agents[i].turnRate.mag();
+      }
+      
       agents[i].incrementFitness(value); //change agent's fitness value
       agents[i].evaluateFitness(FITNESS_CUTOFF);
     }
