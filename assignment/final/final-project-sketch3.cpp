@@ -9,6 +9,7 @@
 #include "al/app/al_DistributedApp.hpp"
 #include "al/math/al_Random.hpp"
 #include "al/ui/al_ControlGUI.hpp"
+#include "al/spatial/al_HashSpace.hpp"
 //cuttlebone includes
 #include "al_ext/statedistribution/al_CuttleboneStateSimulationDomain.hpp"
 //c std library includes
@@ -24,12 +25,13 @@ using namespace std;
 
 // forward declarations of some functions
 string slurp(string fileName); 
-
-//global vars/containers
-const float FITNESS_CUTOFF = 10.0;
-vector<Agent> agents;
+HashSpace space(6, MAX_AGENT_NUM);
 
 class MyApp : public DistributedAppWithState<SharedState>  {
+  //global vars/containers
+  const float FITNESS_CUTOFF = 10.0;
+  vector<Agent> agents;
+
   //TO DO: Hash Space
   
   bool freeze = false;
@@ -47,6 +49,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   Parameter decreaseLifespanAmount{"/decreaseLifespanAmount", "", 0.01, "", 0.0, 1.0};
   Parameter reproductionProbabilityThreshold{"/reproductionProbabilityThreshold", "", 0.4, "", 0.0, 1.0};
   Parameter framesPerSecond{"/framesPerSecond", "", 0, "", 0, 100};
+  ParameterInt k{"/k", "", 5, "", 1, 15};
 
   ControlGUI gui;
 
@@ -79,7 +82,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     gui << localRadius << separationDistance << size 
         << ratio << reproductionDistanceThreshold << foodDistanceThreshold 
         << decreaseLifespanAmount << reproductionProbabilityThreshold 
-        << framesPerSecond;
+        << framesPerSecond << k;
     gui.init();
   }
 
@@ -87,6 +90,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     for (int i = agents.size(); i < MAX_AGENT_NUM; i++) {
       Agent a;
       agents.push_back(a);
+
+      space.move(i, a.pos() * space.dim()); //push agents into the hash space
       
       agentMesh.vertex(a.pos());
       agentMesh.normal(a.uf());
@@ -271,24 +276,16 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       Vec3f avgHeading(0, 0, 0);
       Vec3f centerPos(0, 0, 0);
       agents[i].flockCount = 0; //reset flock count
-      for (unsigned j = 1 + i; j < agents.size(); j++) {
-        float distance = (agents[j].pos() - agents[i].pos()).mag();
-          
-        if (distance < localRadius) { 
-          //calculate alignment and cohesion vals if flock mates are far enough away from each other
-          agents[i].flockCount++; //increase the flockmate count for that specific agent
-          avgHeading += agents[j].uf() + agents[j].randomFlocking;
-          centerPos += agents[j].pos();
-          if (distance < separationDistance) {
-              //cout << "separate" << endl;
-              agents[i].pos() -= agents[j].uf().normalize() * agents[i].moveRate * rate;
-          } else {
-              // avgHeading += agents[j].uf();
-              // centerPos += agents[j].pos();
-          }
-        } 
-      }
 
+      HashSpace::Query query(k);
+      int results = query(space, agents[i].pos() * space.dim(),
+                          space.maxRadius() * localRadius);
+      for (int j = 0; j < results; j++) {
+        int id = query[j]->id;
+        avgHeading += agents[id].uf() + agents[id].randomFlocking;
+        centerPos += agents[id].pos();
+      }
+      agents[i].flockCount = results;
       if (agents[i].flockCount > 0) {
           agents[i].heading = avgHeading.normalize()/agents[i].flockCount;
           agents[i].center = centerPos.normalize()/agents[i].flockCount;
@@ -299,6 +296,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void alignmentAndCohesion() {
     for (unsigned i = 0; i < agents.size(); i++) {
       agents[i].pos().lerp(agents[i].center.normalize() + agents[i].uf(), agents[i].moveRate.mag() * rate);
+      space.move(i, agents[i].pos() * space.dim());
       agents[i].faceToward( (agents[i].heading + agents[i].center + agents[i].uf()).normalize() + agents[i].turnRate); // point agents in the direction of their heading
     }
   }
