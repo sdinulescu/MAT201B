@@ -61,6 +61,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   Mesh agentMesh;
   Mesh foodMesh;
+  Mesh forceMesh;
 
   Field field;
 
@@ -108,6 +109,14 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
+  void initForceMesh() {
+    for (int i = 0; i < field.numberOfForces; i++) {
+      forceMesh.vertex(field.forces[i].position);
+      forceMesh.color(1, 1, 1, 0.1);
+      foodMesh.texCoord(field.forces[i].radius, 0);
+    }
+  }
+
   //***********************************************************************
   //onCreate
 
@@ -128,10 +137,12 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     //mesh
     agentMesh.primitive(Mesh::POINTS);
     foodMesh.primitive(Mesh::POINTS);
+    forceMesh.primitive(Mesh::POINTS);
 
     field.resetField(); //initializes the field (fills the food array, initializes forces)
     initFoodMesh(); //init the food mesh with food vector
     initAgents(); //init the agent mesh with agent vector
+    initForceMesh();
 
     nav().pos(0, 0, 3);
   }
@@ -161,15 +172,15 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
-  void applyForces() {
+  void applyForces() { 
     for (int i = 0; i < field.numberOfForces; i++) { //for each of the forces
       for (int j = 0; j < agents.size(); j++) { //for each agent
         //if the agent's position is within the size of the force field (force position + radius)
         float distance = (agents[i].pos() - field.forces[i].position).mag();
         if (distance <= field.forces[i].radius) {
-          //cout << "applying force: " << field.forces[i].attractionMagnitude << endl;
+          cout << "applying force: " << field.forces[i].magnitude << endl;
           //apply forces on that agent
-          agents[i].pos() += field.forces[i].attractionMagnitude; //apply the attraction magnitude
+          agents[i].pos() += field.forces[i].magnitude; //apply the attraction/repelling magnitude
         }
       }
     }
@@ -270,7 +281,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   //flocking
-  void calcFlockingAndSeparation() {
+  void calcFlocking() {
     for (unsigned i = 0; i < agents.size(); i++) {
       agents[i].incrementLifespan(-1 * decreaseLifespanAmount);
       Vec3f avgHeading(0, 0, 0);
@@ -362,6 +373,13 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       foodMesh.texCoord(state().dFood[i].size, 0);
     }
   }
+  void visualizeForces() {
+    for (int i = 0; i < field.numberOfForces; i++) {
+      forceMesh.vertices()[i] = field.forces[i].position;
+      forceMesh.colors()[i].set(1, 1, 1, 0.5);
+      forceMesh.texCoord(field.forces[i].radius, 0);
+    }
+  }
 
   //***********************************************************************
   //update loop
@@ -383,23 +401,23 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         respawnFood();
 
         //update agents
-        calcFlockingAndSeparation();
+        calcFlocking();
         alignmentAndCohesion();
 
-        assignFitness();
-        reproduce();
+        assignFitness(); //assign their fitness values
+        reproduce(); //reproduce with nearby agents
 
         //respawn(); // make this a GUI toggle potentially
 
-        checkAgentDeath();
-        eatFood();
+        checkAgentDeath(); //check if the agent is dead that cycle
+        eatFood(); //agents eat the food near them
 
         //update field
         field.moveFood(); //move the food
         field.updateFood(); //check what food was eaten and update the vector accordingly
-        field.moveForces(); //move the forces
+        field.moveForces(); //move the forces around the space
 
-        applyForces();
+        applyForces(); //apply forces on the agents
 
         //state
         setState();
@@ -407,6 +425,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
       visualizeAgents();
       visualizeFood();
+      visualizeForces();
     }
   }
 
@@ -423,8 +442,10 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
 
     foodMesh.reset();
+    forceMesh.reset();
     field.resetField();
     initFoodMesh();
+    initForceMesh();
   }
 
   bool onKeyDown(const Keyboard& k) override {
@@ -453,6 +474,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     g.shader(foodShader);
     g.shader().uniform("pointSize", state().size * 0.005);
     g.draw(foodMesh);
+    g.draw(forceMesh);
   }
 
   void onDraw(Graphics& g) override {

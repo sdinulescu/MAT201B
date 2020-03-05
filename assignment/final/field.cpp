@@ -37,7 +37,7 @@ struct Food { //food in the field
 
 struct Force { //forces in the field
   Vec3f position;
-  Vec3f attractionMagnitude;
+  Vec3f magnitude;
   Vec3f travelVelocity;
 
   float radius;
@@ -46,9 +46,9 @@ struct Force { //forces in the field
   Force() {  reset();  }
   void reset() {
     position = Vec3f( rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  );
-    attractionMagnitude = Vec3f(  rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  );
+    magnitude = Vec3f(  rnd::uniform(), rnd::uniform(), rnd::uniform() * 10 );
     travelVelocity = Vec3f(  rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  ) * 0.001;
-    radius = rnd::uniform();
+    radius = rnd::uniform() * 100;
   }
 };
 
@@ -58,7 +58,7 @@ struct Field {
 
   int amountOfFood = 500;
   vector<Food> food;
-  const static int numberOfForces = 2;
+  const static int numberOfForces = 5;
   Force forces[numberOfForces];
 
   void resetField() { // initialize all things in the field
