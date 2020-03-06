@@ -58,7 +58,7 @@ struct Field {
 
   int amountOfFood = 500;
   vector<Food> food;
-  const static int numberOfForces = 5;
+  const static int numberOfForces = 0;
   Force forces[numberOfForces];
 
   void resetField() { // initialize all things in the field

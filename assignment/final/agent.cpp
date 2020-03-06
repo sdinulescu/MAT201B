@@ -39,19 +39,17 @@ struct Agent : Pose {
 
   //constructors
   Agent() { reset(); } //constructor, initialize with a position and a forward
-  Agent(Vec3f p, Vec3f o, Vec3f h, Vec3f c, Vec3f m, Vec3f t, Vec3f r, float l) {
+  Agent(Vec3f p, Vec3f o, Vec3f m, Vec3f t, Vec3f r) { //everything that gets inherited
     pos(p);
     faceToward(o);
-    heading = h;
-    center = c;
     moveRate = m;
     turnRate = t;
     randomFlocking = r;
-    lifespan = l;
+    lifespan = rnd::uniform() * 10.0;
     colorTransparency = lifespan * 0.1;
+    fitnessValue = 0.0;
+    startCheckingFitness = rnd::uniformS()*10;
     canReproduce = false;
-    fitnessValue = 0.0f;
-    randomFlocking = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
   }
   void reset() { //give agents a pos and a forward
     pos(randomVec3f());
@@ -59,11 +57,9 @@ struct Agent : Pose {
     randomFlocking = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
     moveRate = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
     turnRate = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
-    //heading = Vec3f(rnd::uniform(), rnd::uniform(), rnd::uniform());
-    //center = Vec3f(rnd::uniform(), rnd::uniform(), rnd::uniform());
-    lifespan = rnd::uniform() * 10.0f;
+    lifespan = rnd::uniform() * 10.0;
     colorTransparency = lifespan * 0.1;
-    fitnessValue = 0.0f;
+    fitnessValue = 0.0;
     startCheckingFitness = rnd::uniformS()*10;
     canReproduce = false;
   }
