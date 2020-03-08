@@ -20,6 +20,7 @@ struct Agent : Pose {
   
   float lifespan; // agents die after a certain point
   bool canReproduce; //true if it can reproduce, false if it can't
+  Color agentColor;
   float colorTransparency; //sets the alpha value per agent
 
   //flocking attributes
@@ -39,7 +40,7 @@ struct Agent : Pose {
 
   //constructors
   Agent() { reset(); } //constructor, initialize with a position and a forward
-  Agent(Vec3f p, Vec3f o, Vec3f m, Vec3f t, Vec3f r) { //everything that gets inherited
+  Agent(Vec3f p, Vec3f o, Vec3f m, Vec3f t, Vec3f r, Vec3f c) { //everything that gets inherited
     pos(p);
     faceToward(o);
     moveRate = m;
@@ -47,6 +48,7 @@ struct Agent : Pose {
     randomFlocking = r;
     lifespan = rnd::uniform() * 10.0;
     colorTransparency = lifespan * 0.1;
+    agentColor = Color(c.x, c.y, c.z, colorTransparency);
     fitnessValue = 0.0;
     startCheckingFitness = rnd::uniformS()*10;
     canReproduce = false;
@@ -59,6 +61,7 @@ struct Agent : Pose {
     turnRate = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
     lifespan = rnd::uniform() * 10.0;
     colorTransparency = lifespan * 0.1;
+    agentColor = Color(rnd::uniform(), rnd::uniform(), rnd::uniform(), colorTransparency);
     fitnessValue = 0.0;
     startCheckingFitness = rnd::uniformS()*10;
     canReproduce = false;
@@ -69,6 +72,7 @@ struct Agent : Pose {
   void incrementLifespan(float amount) {
     lifespan += amount;
     colorTransparency = lifespan * 0.1;
+    agentColor.a = colorTransparency;
   }
   void incrementFitness(float value) {  fitnessValue += value;  }
 
@@ -102,14 +106,14 @@ struct Agent : Pose {
 struct DrawableAgent {
   Vec3f position, forward; //agents have a position and a forward
   Vec3f up; //part of orientation -> which way is up?
-  float colorTransparency;
+  Color agentColor;
 
   DrawableAgent() {}
 
-  DrawableAgent(Vec3f p, Vec3f f, Vec3f u, float c) {
+  DrawableAgent(Vec3f p, Vec3f f, Vec3f u, Color c) {
     position = p;
     forward = f;
     up = u;
-    colorTransparency = c;
+    agentColor = c;
   }
 };

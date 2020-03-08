@@ -7,7 +7,7 @@ in Vertex {
   vec3 position;
   vec3 forward;
   vec3 up;
-  float transparency;
+  vec4 color;
 }
 vertex[];
 
@@ -39,9 +39,9 @@ mat4 rotationMatrix(vec3 axis, float angle) {
 void main() {
   mat4 pm = al_ProjectionMatrix * al_ModelViewMatrix;
   vec3 position = vertex[0].position;
-  vec3 forward = vertex[0].forward * size / (0.1 + vertex[0].transparency); 
+  vec3 forward = vertex[0].forward * size / (0.1 + vertex[0].color.w); 
   vec3 up = vertex[0].up;
-  float t = vertex[0].transparency;
+  vec4 color = vertex[0].color;
 
   vec3 over = cross(up, forward) * ratio;
 
@@ -63,43 +63,43 @@ void main() {
            1.0f);
 
   gl_Position = a;
-  fragment.color = vec4(1.0, 1.0, 1.0, t);
+  fragment.color = color;
   EmitVertex();
 
   gl_Position = b;
-  fragment.color = vec4(1.0, 0.0, 0.0, t);
+  fragment.color = color;
   EmitVertex();
 
   gl_Position = c;
-  fragment.color = vec4(0.0, 1.0, 0.0, t);
+  fragment.color = color;
   EmitVertex();
 
   EndPrimitive();
 
   gl_Position = a;
-  fragment.color = vec4(1.0, 1.0, 1.0, t);
+  fragment.color = color;
   EmitVertex();
 
   gl_Position = c;
-  fragment.color = vec4(0.0, 1.0, 0.0, t);
+  fragment.color = color;
   EmitVertex();
 
   gl_Position = d;
-  fragment.color = vec4(0.0, 0.0, 1.0, t);
+  fragment.color = color;
   EmitVertex();
 
   EndPrimitive();
 
   gl_Position = a;
-  fragment.color = vec4(1.0, 1.0, 1.0, t);
+  fragment.color = color;
   EmitVertex();
 
   gl_Position = d;
-  fragment.color = vec4(0.0, 0.0, 1.0, t);
+  fragment.color = color;
   EmitVertex();
 
   gl_Position = b;
-  fragment.color = vec4(1.0, 0.0, 0.0, t);
+  fragment.color = color;
   EmitVertex();
 
   EndPrimitive();

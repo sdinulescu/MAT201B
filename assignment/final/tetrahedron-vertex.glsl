@@ -9,7 +9,7 @@ out Vertex {
   vec3 position;
   vec3 forward;
   vec3 up;
-  float transparency;
+  vec4 color;
 }
 vertex;
 
@@ -17,5 +17,5 @@ void main() {
   vertex.position = position;
   vertex.forward = normal;
   vertex.up = color.rgb;
-  vertex.transparency = color.w;
+  vertex.color = color;
 }
