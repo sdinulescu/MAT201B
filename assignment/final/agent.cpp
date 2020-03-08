@@ -4,8 +4,8 @@
  */
 
 #pragma once
+#include "Gamma/Oscillator.h"
 
-#include "al/app/al_DistributedApp.hpp"
 using namespace al;
 
 Vec3f randomVec3f(){ 
@@ -38,6 +38,10 @@ struct Agent : Pose {
 
   unsigned flockCount{1}; //how many neighbors?
 
+  //agent sound
+  gam::Sine<> osc;  // a Gamma sine oscillator
+  float frequency;
+
   //constructors
   Agent() { reset(); } //constructor, initialize with a position and a forward
   Agent(Vec3f p, Vec3f o, Vec3f m, Vec3f t, Vec3f r, Vec3f c) { //everything that gets inherited
@@ -52,6 +56,8 @@ struct Agent : Pose {
     fitnessValue = 0.0;
     startCheckingFitness = rnd::uniformS()*10;
     canReproduce = false;
+    frequency = 100 + rnd::uniform() * 100.0; // TO DO CHANGE VALUE!!!!!!
+    osc.freq(frequency);
   }
   void reset() { //give agents a pos and a forward
     pos(randomVec3f());
@@ -63,8 +69,12 @@ struct Agent : Pose {
     colorTransparency = lifespan * 0.1;
     agentColor = Color(rnd::uniform(), rnd::uniform(), rnd::uniform(), colorTransparency);
     fitnessValue = 0.0;
-    startCheckingFitness = rnd::uniformS()*10;
+    startCheckingFitness = rnd::uniformS()*10.0;
     canReproduce = false;
+    frequency = 100 + rnd::uniform() * 100.0;
+    //cout << frequency << endl;
+    osc.freq(frequency);
+    
   }
 
   //getters and setters
@@ -97,6 +107,19 @@ struct Agent : Pose {
         lifespan = 0;
       }
     }
+  }
+
+  void updateFrequency() {
+    frequency = frequency + (pos().mag() * 100);
+    //cout << frequency << endl;
+    osc.freq(frequency);
+  }
+
+  float playSound() {
+      float s = osc();
+      s *= 0.1f;
+      //cout << s << endl;
+      return s;
   }
 };
 

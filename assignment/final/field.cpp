@@ -3,7 +3,6 @@
  */
 #pragma once 
 
-#include "al/app/al_DistributedApp.hpp"
 #include "al/math/al_Random.hpp"
 #include <fstream>
 #include <vector>
@@ -35,6 +34,7 @@ struct Food { //food in the field
   bool isFoodConsumed() { return isConsumed; }
 };
 
+// TO DO: FIX THIS ASAP!!!!!!!!!!!
 struct Force { //forces in the field
   Vec3f position;
   Vec3f magnitude;

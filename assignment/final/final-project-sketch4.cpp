@@ -31,11 +31,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //global vars/containers
   const float FITNESS_CUTOFF = 10.0;
   vector<Agent> agents;
-
-  //TO DO: Hash Space
-  
   bool freeze = false;
-
   //Gui params
   //flocking params
   Parameter rate{"/rate", "", 0.015, "", 0.01, 0.1};
@@ -49,7 +45,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   Parameter reproductionProbabilityThreshold{"/reproductionProbabilityThreshold", "", 0.4, "", 0.0, 1.0};
   Parameter framesPerSecond{"/framesPerSecond", "", 0, "", 0, 100};
   ParameterInt k{"/k", "", 5, "", 1, 15};
-
   ControlGUI gui;
 
   std::shared_ptr<CuttleboneStateSimulationDomain<SharedState>>
@@ -111,6 +106,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //onCreate
 
   void onCreate() override {
+    gam::sampleRate(audioIO().framesPerSecond());
+
     initCuttlebone();
     initGuiAndPassParams();
     
@@ -223,7 +220,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     //cout << "--------------------" << endl;
   }
 
-  void assignFitness() {
+  void assignFitness() { //assign a fitness value to each agent based on specific rules
     for (int i = 0; i < agents.size(); i++) {
       float value = 0.0;
       //flock count
@@ -293,11 +290,14 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
-  void alignmentAndCohesion() {
+  void alignmentAndCohesion() { //agent update function
+    //alignment and cohesion from boids algorithm
     for (unsigned i = 0; i < agents.size(); i++) {
       agents[i].pos().lerp(agents[i].center.normalize() + agents[i].uf(), agents[i].moveRate.mag() * rate);
       space.move(i, agents[i].pos() * space.dim());
       agents[i].faceToward( (agents[i].heading + agents[i].center + agents[i].uf()).normalize() * agents[i].turnRate.mag() ); // point agents in the direction of their heading
+      
+      agents[i].updateFrequency(); //update frequency based on new position
     }
   }
 
@@ -339,8 +339,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     state().ratio = ratio.get();
   }
 
-  // visualize the agents, update meshes using DrawableAgent in state (for ALL screens)
-  void visualizeAgents() {
+  //visualize
+  void visualizeAgents() { // visualize the agents, update meshes using DrawableAgent in state (for ALL screens)
     for (unsigned i = 0; i < agents.size(); i++) {
       agentMesh.vertices()[i] = state().dAgents[i].position;
       agentMesh.normals()[i] = state().dAgents[i].forward;
@@ -355,7 +355,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
-  void visualizeFood() { //update the mesh
+  void visualizeFood() { // visualize the food, update meshes using DrawableFood in state (for ALL screens)
     for (unsigned i = 0; i < MAX_FOOD_NUM; i++) {
       foodMesh.vertices()[i] = state().dFood[i].position;
       foodMesh.colors()[i].set(state().dFood[i].color.r, state().dFood[i].color.g, state().dFood[i].color.b);
@@ -365,7 +365,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   //***********************************************************************
   //update loop
-   //frame counter 
+   
+  //frame counter 
   int frameCount{0};
   float timer{0};
 
@@ -438,6 +439,19 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   //***********************************************************************
+  // onSound
+
+  void onSound(AudioIOData& io) override {
+    while (io()) {
+      for (int i = 0; i < agents.size(); i++) {
+        float s = agents[i].playSound(); //get their sample
+        io.out(0) = s;    // write the signal to channels 0 and 1
+        io.out(1) = s;
+      }
+    }
+  }
+
+  //***********************************************************************
   // draw loop
 
   void renderAgents(Graphics& g) {
@@ -475,6 +489,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
 int main() {
   MyApp app;
+    // Enable audio with 2 channels of output.
+  app.configureAudio(44100, 512, 2, 0);
   app.start();
 }
 
