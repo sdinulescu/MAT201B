@@ -9,10 +9,6 @@
 
 using namespace al;
 
-Vec3f randomVec3f(){ 
-  return Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
-}
-
 struct Agent : Pose {
   // Agent attributes
 
@@ -60,13 +56,13 @@ struct Agent : Pose {
     startCheckingFitness = rnd::uniformS()*10;
     canReproduce = false;
 
-    // CHANGE THESE VALUES TO MAKE THEM INHERITABLE
+    // TO DO: CHANGE THESE VALUES TO MAKE THEM INHERITABLE
     frequency = 100 + rnd::uniform() * 100.0; 
     amplitude = rnd::uniform(); 
   }
   void reset() { //give agents a pos and a forward
-    pos(randomVec3f());
-    faceToward(randomVec3f());
+    pos(Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()));
+    faceToward(Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()));
     randomFlocking = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
     moveRate = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
     turnRate = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
@@ -121,7 +117,7 @@ struct Agent : Pose {
     //set the amplitude
     amplitude = amplitude + numberOfFlockmates * 0.1 ; //set the amplitude proportional to the number of flockmates
     //set the frequency
-    frequency = avgFreq + (pos().mag());
+    frequency = avgFreq + (pos().mag()); //SOMETHING ISN'T WORKING HERE
   }
 
   float playSound() {
