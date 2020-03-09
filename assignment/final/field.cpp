@@ -34,40 +34,28 @@ struct Food { //food in the field
   bool isFoodConsumed() { return isConsumed; }
 };
 
-// TO DO: FIX THIS ASAP!!!!!!!!!!!
-struct Force { //forces in the field
-  Vec3f position;
-  Vec3f magnitude;
-  Vec3f travelVelocity;
-
-  float radius;
-
-  //Force constructors
-  Force() {  reset();  }
-  void reset() {
-    position = Vec3f( rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  );
-    magnitude = Vec3f(  rnd::uniform(), rnd::uniform(), rnd::uniform() * 10 );
-    travelVelocity = Vec3f(  rnd::uniformS(), rnd::uniformS(), rnd::uniformS()  ) * 0.001;
-    radius = rnd::uniform() * 100;
-  }
-};
-
 struct Field {
 // TO DO -- flesh this out
 // include some environmental effects that can be positive or negative for agents in the surrounding area
 
   int amountOfFood = 500;
   vector<Food> food;
-  const static int numberOfForces = 0;
-  Force forces[numberOfForces];
 
-  void resetField() { // initialize all things in the field
-    initializeFood();
-    initializeForces();
-    // TO DO: add forces and other things here
+  int side;
+  vector<Vec3f> fluidForces;
+  vector<float> dampingFactors;
+
+  // initialize
+  void make(int s) {
+    side = s;
+    for (int i = 0; i < side*side*side; i++) {
+      Vec3f randomFluidForce = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
+      fluidForces.push_back(randomFluidForce);
+      dampingFactors.push_back(rnd::uniform());
+    }
+    cout << "make is done!" << endl;
   }
 
-  //*********************Food*********************
   void initializeFood() {
     for (int i = 0; i < amountOfFood; i++) {
       Food f;
@@ -75,6 +63,16 @@ struct Field {
     }
   }
 
+  void resetField() { // initialize all things in the field
+    cout << "init field..." << endl;
+    make(10);
+    initializeFood();
+    cout << "field is initialized!" << endl;
+    //initializeForces();
+    // TO DO: add forces and other things here
+  }
+
+  //Food
   void moveFood() {
     for (int i = 0; i < food.size(); i++) {
       if (food[i].position.mag() > 1.1) {
@@ -108,16 +106,23 @@ struct Field {
     return amountOfFood;
   }
 
-  //*********************Forces*********************
-  void initializeForces() {
-    for (int i = 0 ; i < numberOfForces; i++) {
-      Force f;
-      forces[i] = f;
-    }
+  //Fluid Simulation
+  int findGridBlock(Vec3f position) {
+    float index = abs(position.x + position.y + position.z);
+    index *= 10;
+    int i = index;
+    //cout << i << endl;
+    return i;
   }
-  void moveForces() {
-    for (int i = 0; i < numberOfForces; i++) {
-      forces[i].position += forces[i].travelVelocity;
+
+  Vec3f getForceVector(int index) { return fluidForces[index]; }
+  void dampForces() {
+    for (int i = 0; i < fluidForces.size(); i++) {
+      if (fluidForces[i].mag() > 0.001) {
+        fluidForces[i] = fluidForces[i] * dampingFactors[i];
+      } else {
+        fluidForces[i] = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()); //reset the fluid force
+      }
     }
   }
 };

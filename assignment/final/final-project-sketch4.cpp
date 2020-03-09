@@ -158,17 +158,14 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void applyForces() {
-    for (int i = 0; i < field.numberOfForces; i++) { //for each of the forces
-      for (int j = 0; j < agents.size(); j++) { //for each agent
-        //if the agent's position is within the size of the force field (force position + radius)
-        float distance = (agents[i].pos() - field.forces[i].position).mag();
-        if (distance <= field.forces[i].radius) {
-          //cout << "applying force: " << field.forces[i].attractionMagnitude << endl;
-          //apply forces on that agent
-          agents[i].pos() += field.forces[i].magnitude; //apply the attraction magnitude
-        }
-      }
+    //take an agent, find out the grid space that it is in
+    for (int i = 0; i < agents.size(); i++) {
+      int index = field.findGridBlock(agents[i].pos()); //find the grid that it is in
+      //cout << index << endl;
+      Vec3f forceField = field.getForceVector(index); //get the force vector to apply to the agent
+      agents[i].pos(agents[i].pos() + forceField * rate);
     }
+    field.dampForces();
   }
 
   //reproduce between two boids
@@ -272,6 +269,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       agents[i].incrementLifespan(-1 * decreaseLifespanAmount);
       Vec3f avgHeading(0, 0, 0);
       Vec3f centerPos(0, 0, 0);
+      float avgFreq = 0.0;
       agents[i].flockCount = 0; //reset flock count
 
       HashSpace::Query query(k);
@@ -281,12 +279,17 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         int id = query[j]->id;
         avgHeading += agents[id].uf() + agents[id].randomFlocking;
         centerPos += agents[id].pos();
+        avgFreq += agents[id].frequency;
+      }
+      if (results > 0) {
+        avgHeading = avgHeading.normalize() / results;
+        centerPos = centerPos.normalize() / results;
+        avgFreq /= results;
       }
       agents[i].flockCount = results;
-      if (agents[i].flockCount > 0) {
-          agents[i].heading = avgHeading.normalize()/agents[i].flockCount;
-          agents[i].center = centerPos.normalize()/agents[i].flockCount;
-      }
+      agents[i].heading = avgHeading;
+      agents[i].center = centerPos;
+      agents[i].updateAgentSound(results, avgFreq);
     }
   }
 
@@ -296,8 +299,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       agents[i].pos().lerp(agents[i].center.normalize() + agents[i].uf(), agents[i].moveRate.mag() * rate);
       space.move(i, agents[i].pos() * space.dim());
       agents[i].faceToward( (agents[i].heading + agents[i].center + agents[i].uf()).normalize() * agents[i].turnRate.mag() ); // point agents in the direction of their heading
-      
-      agents[i].updateFrequency(); //update frequency based on new position
     }
   }
 
@@ -398,7 +399,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         //update field
         field.moveFood(); //move the food
         field.updateFood(); //check what food was eaten and update the vector accordingly
-        field.moveForces(); //move the forces
 
         applyForces();
 

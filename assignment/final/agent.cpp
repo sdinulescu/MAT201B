@@ -5,6 +5,7 @@
 
 #pragma once
 #include "Gamma/Oscillator.h"
+#include "Gamma/Envelope.h"
 
 using namespace al;
 
@@ -40,7 +41,9 @@ struct Agent : Pose {
 
   //agent sound
   gam::Sine<> osc;  // a Gamma sine oscillator
+  gam::ADSR<> env; // a Gamma envelope
   float frequency;
+  float amplitude;
 
   //constructors
   Agent() { reset(); } //constructor, initialize with a position and a forward
@@ -56,8 +59,10 @@ struct Agent : Pose {
     fitnessValue = 0.0;
     startCheckingFitness = rnd::uniformS()*10;
     canReproduce = false;
-    frequency = 100 + rnd::uniform() * 100.0; // TO DO CHANGE VALUE!!!!!!
-    osc.freq(frequency);
+
+    // CHANGE THESE VALUES TO MAKE THEM INHERITABLE
+    frequency = 100 + rnd::uniform() * 100.0; 
+    amplitude = rnd::uniform(); 
   }
   void reset() { //give agents a pos and a forward
     pos(randomVec3f());
@@ -71,10 +76,13 @@ struct Agent : Pose {
     fitnessValue = 0.0;
     startCheckingFitness = rnd::uniformS()*10.0;
     canReproduce = false;
-    frequency = 100 + rnd::uniform() * 100.0;
-    //cout << frequency << endl;
-    osc.freq(frequency);
-    
+    frequency = rnd::uniform() * 100.0;
+    amplitude = rnd::uniform();
+
+		env.attack(0.01);	// Set attack time in seconds
+		env.decay(1);		// Set decay time in seconds
+		env.sustain(0.5);	// Set sustain level
+		env.release(5);		// Set release time in seconds
   }
 
   //getters and setters
@@ -109,17 +117,21 @@ struct Agent : Pose {
     }
   }
 
-  void updateFrequency() {
-    frequency = frequency + (pos().mag() * 100);
-    //cout << frequency << endl;
-    osc.freq(frequency);
+  void updateAgentSound(int numberOfFlockmates, float avgFreq) {
+    //set the amplitude
+    amplitude = amplitude + numberOfFlockmates * 0.1 ; //set the amplitude proportional to the number of flockmates
+    //set the frequency
+    frequency = avgFreq + (pos().mag());
   }
 
   float playSound() {
-      float s = osc();
-      s *= 0.1f;
-      //cout << s << endl;
-      return s;
+    osc.amp(amplitude);
+    osc.freq(frequency);
+    //osc.phase(lifespan); //does this make sense?
+    float s = osc() * env();
+    s *= 0.1f;
+    //cout << s << endl;
+    return s;
   }
 };
 
