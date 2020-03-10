@@ -9,6 +9,9 @@
 using namespace al;
 using namespace std;
 
+//complete sphere imposters for the food
+//figure out how to render these guys... don't like that they are just particles right now, not sophisticated
+
 struct Food { //food in the field
   Color color;
   float size; //size is proportional to amount of lifespan the creature gains when it is consumed
