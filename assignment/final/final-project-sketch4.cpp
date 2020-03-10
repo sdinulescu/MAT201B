@@ -34,6 +34,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   bool freeze = false;
   //Gui params
   //flocking params
+  Parameter backgroundColor{"/backgroundColor", "", 0.1, "", 0, 1};
   Parameter rate{"/rate", "", 0.015, "", 0.01, 0.1};
   Parameter localRadius{"/localRadius", "", 0.2, "", 0.01, 1.0};
   Parameter size{"/size", "", 1.5, "", 0.0, 4.0};
@@ -73,7 +74,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void initGuiAndPassParams() {
     //gui
-    gui << rate << localRadius << size 
+    gui << backgroundColor << rate << localRadius << size 
         << ratio << reproductionDistanceThreshold << foodDistanceThreshold 
         << decreaseLifespanAmount << reproductionProbabilityThreshold 
         << framesPerSecond << k;
@@ -335,7 +336,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
     //set the other state vars
     state().cameraPose.set(nav());
-    state().background = 0.1;
+    state().background = backgroundColor;
     state().size = size.get();
     state().ratio = ratio.get();
   }
