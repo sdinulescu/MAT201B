@@ -106,7 +106,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //onCreate
 
   void onCreate() override {
-    gam::sampleRate(audioIO().framesPerSecond());
+   //gam::sampleRate(audioIO().framesPerSecond());
 
     initCuttlebone();
     initGuiAndPassParams();
@@ -279,7 +279,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         int id = query[j]->id;
         avgHeading += agents[id].uf() + agents[id].randomFlocking;
         centerPos += agents[id].pos();
-        avgFreq += agents[id].frequency;
+        //avgFreq += agents[id].frequency;
       }
       if (results > 0) {
         avgHeading = avgHeading.normalize() / results;
@@ -289,7 +289,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       agents[i].flockCount = results;
       agents[i].heading = avgHeading;
       agents[i].center = centerPos;
-      agents[i].updateAgentSound(results, avgFreq);
+      //agents[i].updateAgentSound(results, avgFreq);
     }
   }
 
@@ -441,15 +441,15 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //***********************************************************************
   // onSound
 
-  void onSound(AudioIOData& io) override {
-    while (io()) {
-      for (int i = 0; i < agents.size(); i++) {
-        float s = agents[i].playSound(); //get their sample
-        io.out(0) = s;    // write the signal to channels 0 and 1
-        io.out(1) = s;
-      }
-    }
-  }
+  // void onSound(AudioIOData& io) override {
+  //   while (io()) {
+  //     for (int i = 0; i < agents.size(); i++) {
+  //       float s = agents[i].playSound(); //get their sample
+  //       io.out(0) = s;    // write the signal to channels 0 and 1
+  //       io.out(1) = s;
+  //     }
+  //   }
+  // }
 
   //***********************************************************************
   // draw loop
@@ -490,7 +490,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 int main() {
   MyApp app;
     // Enable audio with 2 channels of output.
-  app.configureAudio(44100, 512, 2, 0);
+  //app.configureAudio(44100, 512, 2, 0);
   app.start();
 }
 
