@@ -60,13 +60,8 @@ struct Agent : Pose {
     canReproduce = false;
 
     // // TO DO: CHANGE THESE VALUES TO MAKE THEM INHERITABLE
-    amplitude = 1;
-    frequency = 500;
-    // frequency = rnd::uniform() * 500.0; 
-    // amplitude = rnd::uniform(); 
-    // osc.freq(frequency);
-    // osc.amp(amplitude);
-    // osc.length(lifespan);
+    frequency = rnd::uniform() * 500.0; 
+    amplitude = rnd::uniform(); 
   }
   void reset() { //give agents a pos and a forward
     pos(Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()));
@@ -81,14 +76,8 @@ struct Agent : Pose {
     startCheckingFitness = rnd::uniformS()*10.0;
     canReproduce = false;
 
-    amplitude = 1;
-    frequency = 500;
-
-    // frequency = rnd::uniform() * 500.0;
-    // amplitude = rnd::uniform();
-    // osc.freq(frequency);
-    // osc.amp(amplitude);
-    // osc.length(0.8);
+    frequency = rnd::uniform() * 500.0;
+    amplitude = rnd::uniform();
   }
 
   //getters and setters
@@ -134,12 +123,12 @@ struct Agent : Pose {
   float setChirp() {
     cout << "setting chirp" << endl;
     //these values will be individualized
-    osc.amp(1);
-    osc.freq(1000);
-    osc.length(0.5);
+    osc.amp(amplitude);
+    osc.freq(frequency);
+    osc.length(colorTransparency); //length of chirp proportional to lifespan of agent
   }
 
-  float getSound() { return osc().norm(); }
+  float getSound() { return osc().r; }
 };
 
 //**************************

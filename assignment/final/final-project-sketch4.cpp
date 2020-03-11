@@ -291,6 +291,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       agents[i].flockCount = results;
       agents[i].heading = avgHeading;
       agents[i].center = centerPos;
+      
       //agents[i].updateAgentSound(results, avgFreq);
     }
   }
@@ -454,6 +455,9 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         sound += agents[i].getSound();
       }
       sound /= agents.size();
+      // cap sound
+      if (sound >  5) { sound = 5; }
+      if (sound < 0) { sound = 0; }
       cout << sound << endl;
       io.out(0) = io.out(1) = sound;    // write the signal to channels 0 and 1
     }
