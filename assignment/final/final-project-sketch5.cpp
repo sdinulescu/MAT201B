@@ -141,7 +141,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void eatFood() { // if the agent is at a specific location in the environment and finds food, then increase it's lifespan
     for (int i = 0; i < agents.size(); i++) { //check each of the agents
-      for (int j = 0; j < field.food.size(); j++) { //chech each of the food particles
+      for (int j = 0; j < field.getAmountOfFood(); j++) { //check each of the food particles
         float distance = Vec3f(agents[i].pos() - field.food[j].getPosition()).mag();
         if (distance < foodDistanceThreshold) { //if the agent is this close to the food particle
           //cout << "food @ index " << i << " consumed!" << endl;
@@ -154,8 +154,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   // **************** CHANGE ****************
   void respawnFood() { // TO DO: only respawn food if something is triggered in the environment
-    int foodThreshold = 100;
-    if (field.getAmountOfFood() < foodThreshold) { //if there are less than 50 food particles in the field
+    int foodThreshold = 250;
+    if (field.getAmountOfFood() < foodThreshold) { //if there are less than X food particles in the field
     //cout << "food is under " << foodThreshold << endl;
       field.addFood();
     }
@@ -320,28 +320,15 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       DrawableAgent a(agents[i].pos(), agents[i].uf(), agents[i].uu(), agents[i].agentColor);
       state().dAgents[i] = a;
     }
-    // if (agents.size() < MAX_AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
-    //   for (int i = agents.size(); i < MAX_AGENT_NUM; i++) {
-    //     DrawableAgent a(Vec3f(0, 0, 0), Vec3f(0, 0, 0), Vec3f(0, 0, 0), Color(0));
-    //     state().dAgents[i] = a;
-    //   }
-    // }
 
     //set the environment
     //cout << field.food.size() << endl;
-    for (unsigned i = 0; i < field.food.size(); i++) {
+    for (unsigned i = 0; i < field.getAmountOfFood(); i++) {
       //copy all the new food positions
       //cout << field.food[i].getPosition() << " ";
       DrawableFood f(field.food[i].getPosition(), field.food[i].getSize(), field.food[i].getColor());
       state().dFood[i] = f;
     }
-    // if (field.food.size() < MAX_FOOD_NUM) { // if the vector is smaller than the Drawable Agent array capacity
-    //   //cout << "less food" << endl;
-    //   for (int i = field.food.size(); i < MAX_FOOD_NUM; i++) {
-    //     DrawableFood f(Vec3f(0, 0, 0), 0, Color(0, 0, 0, 0));
-    //     state().dFood[i] = f;
-    //   }
-    // }
 
     //set the other state vars
     state().cameraPose.set(nav());
@@ -354,29 +341,19 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void visualizeAgents() { // visualize the agents, update meshes using DrawableAgent in state (for ALL screens)
     agentMesh.reset();
     for (unsigned i = 0; i < agents.size(); i++) {
-      
       agentMesh.vertex(state().dAgents[i].position);
       agentMesh.normal(state().dAgents[i].forward);
-      //const Vec3d& up(state().dAgents[i].up);
       agentMesh.color(state().dAgents[i].agentColor.r, state().dAgents[i].agentColor.b, state().dAgents[i].agentColor.g, state().dAgents[i].agentColor.a);
-      //cout << "color " << state().dAgents[i].colorTransparency << endl;
     }
-    // if (agents.size() < MAX_AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
-    //   for (int i = agents.size(); i < MAX_AGENT_NUM; i++) {
-    //     agentMesh.colors()[i].set(0.0f, 0.0f, 0.0f, 0.0f); //don't draw that agent
-    //   }
-    // }
   }
 
   void visualizeFood() { // visualize the food, update meshes using DrawableFood in state (for ALL screens)
-    //foodMesh.reset();
-    for (unsigned i = 0; i < field.food.size(); i++) {
-      foodMesh.vertices()[i] = state().dFood[i].position;
-      foodMesh.colors()[i].set(state().dFood[i].color.r, state().dFood[i].color.g, state().dFood[i].color.b);
+    foodMesh.reset();
+    for (unsigned i = 0; i < field.getAmountOfFood(); i++) {
+      //cout << state().dFood[i].size << endl;
+      foodMesh.vertex(state().dFood[i].position);
+      foodMesh.color(state().dFood[i].color.r, state().dFood[i].color.g, state().dFood[i].color.b);
       foodMesh.texCoord(state().dFood[i].size, 0);
-      // foodMesh.vertex(state().dFood[i].position);
-      // foodMesh.color(state().dFood[i].color.r, state().dFood[i].color.g, state().dFood[i].color.b);
-      // foodMesh.texCoord(state().dFood[i].size, 0);
     }
   }
 

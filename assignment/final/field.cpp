@@ -30,7 +30,6 @@ struct Food { //food in the field
   }
 
   void setSize(int s) { size = s; }
-
   Vec3f getPosition() { return position; }
   Color getColor() { return color; }
   float getSize() { return size; }
@@ -131,12 +130,12 @@ struct Field {
 //**************************
 struct DrawableFood {
   Color color;
-  int size; //size is proportional to amount of lifespan the creature gains when it is consumed
+  float size; //size is proportional to amount of lifespan the creature gains when it is consumed
   Vec3f position;
 
   DrawableFood() {}
 
-  DrawableFood(Vec3f p, int s, Color c) {
+  DrawableFood(Vec3f p, float s, Color c) {
     position = p;
     size = s;
     color = c;
