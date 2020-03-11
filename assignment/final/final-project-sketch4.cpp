@@ -221,6 +221,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void assignFitness() { //assign a fitness value to each agent based on specific rules
     for (int i = 0; i < agents.size(); i++) {
       float value = 0.0;
+      //cout << "agent flockcount" << agents[i].flockCount << endl;
       //flock count
       if (agents[i].flockCount < 5 || agents[i].flockCount > 30) {
         value -= rnd::uniform() * agents[i].flockCount;
@@ -290,7 +291,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       agents[i].flockCount = results;
       agents[i].heading = avgHeading;
       agents[i].center = centerPos;
-      agents[i].updateAgentSound(results, avgFreq);
+      //agents[i].updateAgentSound(results, avgFreq);
     }
   }
 
@@ -444,15 +445,17 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void onSound(AudioIOData& io) override {
     while (io()) {
-      float s = 0;
+      float sound = 0.0;
       for (int i = 0; i < agents.size(); i++) {
-        s += agents[i].playSound(); //get their sample
-      }
-      s /= agents.size();
-      s *= 0.1;
+        if (agents[i].osc.done()) {
+          agents[i].setChirp();
+        }
 
-      io.out(0) = s;    // write the signal to channels 0 and 1
-      io.out(1) = s;
+        sound += agents[i].getSound();
+      }
+      sound /= agents.size();
+      cout << sound << endl;
+      io.out(0) = io.out(1) = sound;    // write the signal to channels 0 and 1
     }
   }
 

@@ -5,10 +5,8 @@
 
 #pragma once
 #include "Gamma/Oscillator.h"
-#include "Gamma/Envelope.h"
 
 using namespace al;
-
 
 //inherit from Sound Source -> try to find an example
 // could potentially have a Pose in it -> look at this
@@ -42,8 +40,7 @@ struct Agent : Pose {
   unsigned flockCount{1}; //how many neighbors?
 
   //agent sound
-  gam::Sine<> osc;  // a Gamma sine oscillator
-  gam::ADSR<> env; // a Gamma envelope
+  gam::Chirplet<> osc;  // a Gamma sine oscillator
   float frequency;
   float amplitude;
 
@@ -63,8 +60,13 @@ struct Agent : Pose {
     canReproduce = false;
 
     // // TO DO: CHANGE THESE VALUES TO MAKE THEM INHERITABLE
-    frequency = 100 + rnd::uniform() * 100.0; 
-    amplitude = rnd::uniform(); 
+    amplitude = 1;
+    frequency = 500;
+    // frequency = rnd::uniform() * 500.0; 
+    // amplitude = rnd::uniform(); 
+    // osc.freq(frequency);
+    // osc.amp(amplitude);
+    // osc.length(lifespan);
   }
   void reset() { //give agents a pos and a forward
     pos(Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()));
@@ -78,13 +80,15 @@ struct Agent : Pose {
     fitnessValue = 0.0;
     startCheckingFitness = rnd::uniformS()*10.0;
     canReproduce = false;
-    frequency = rnd::uniform() * 100.0;
-    amplitude = rnd::uniform();
 
-		env.attack(0.01);	// Set attack time in seconds
-		env.decay(1);		// Set decay time in seconds
-		env.sustain(0.5);	// Set sustain level
-		env.release(5);		// Set release time in seconds
+    amplitude = 1;
+    frequency = 500;
+
+    // frequency = rnd::uniform() * 500.0;
+    // amplitude = rnd::uniform();
+    // osc.freq(frequency);
+    // osc.amp(amplitude);
+    // osc.length(0.8);
   }
 
   //getters and setters
@@ -121,20 +125,21 @@ struct Agent : Pose {
 
   void updateAgentSound(int numberOfFlockmates, float avgFreq) {
     //set the amplitude
-    amplitude = amplitude + numberOfFlockmates * 0.1 ; //set the amplitude proportional to the number of flockmates
+    amplitude = amplitude + numberOfFlockmates * 0.1; //set the amplitude proportional to the number of flockmates
     //set the frequency
     frequency = avgFreq + (pos().mag()); //SOMETHING ISN'T WORKING HERE
+    //cout << amplitude << " " << frequency << endl;
   }
 
-  float playSound() {
-    osc.amp(amplitude);
-    osc.freq(frequency);
-    //osc.phase(lifespan); //does this make sense?
-    float s = osc() * env();
-    s *= 0.1f;
-    //cout << s << endl;
-    return s;
+  float setChirp() {
+    cout << "setting chirp" << endl;
+    //these values will be individualized
+    osc.amp(1);
+    osc.freq(1000);
+    osc.length(0.5);
   }
+
+  float getSound() { return osc().norm(); }
 };
 
 //**************************
