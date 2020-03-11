@@ -102,6 +102,7 @@ struct Agent : Pose {
       }
     }
   }
+
   void evaluateFitness(float fitnessCutoff) {
     if (lifespan < startCheckingFitness) {
       //cout << "start checking fitness" << endl;
