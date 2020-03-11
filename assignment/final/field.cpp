@@ -78,11 +78,7 @@ struct Field {
   //Food
   void moveFood() {
     for (int i = 0; i < food.size(); i++) {
-      if (food[i].position.mag() > 1.1) {
-        food[i].reset();
-      } else {
         food[i].position += food[i].velocity; //moving at constant vel
-      }
     }
   }
 

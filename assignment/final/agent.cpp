@@ -22,7 +22,6 @@ struct Agent : Pose {
   float lifespan; // agents die after a certain point
   bool canReproduce; //true if it can reproduce, false if it can't
   Color agentColor;
-  float colorTransparency; //sets the alpha value per agent
 
   //flocking attributes
   Vec3f heading; //heading from POV of agent (sum of all the headings, then divide by the count)
@@ -46,15 +45,16 @@ struct Agent : Pose {
 
   //constructors
   Agent() { reset(); } //constructor, initialize with a position and a forward
-  Agent(Vec3f p, Vec3f o, Vec3f m, Vec3f t, Vec3f r, Vec3f c) { //everything that gets inherited
+  Agent(Vec3f p, Vec3f o, Vec3f m, Vec3f t, Vec3f c) { //everything that gets inherited
     pos(p);
     faceToward(o);
     moveRate = m;
     turnRate = t;
-    randomFlocking = r;
     lifespan = rnd::uniform() * 10.0;
-    colorTransparency = lifespan * 0.1;
-    agentColor = Color(c.x, c.y, c.z, colorTransparency);
+    agentColor = Color(c.x, c.y, c.z, lifespan);
+
+    randomFlocking = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
+
     fitnessValue = 0.0;
     startCheckingFitness = rnd::uniformS()*10;
     canReproduce = false;
@@ -70,8 +70,7 @@ struct Agent : Pose {
     moveRate = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
     turnRate = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
     lifespan = rnd::uniform() * 10.0;
-    colorTransparency = lifespan * 0.1;
-    agentColor = Color(rnd::uniform(), rnd::uniform(), rnd::uniform(), colorTransparency);
+    agentColor = Color(rnd::uniform(), rnd::uniform(), rnd::uniform(), lifespan);
     fitnessValue = 0.0;
     startCheckingFitness = rnd::uniformS()*10.0;
     canReproduce = false;
@@ -84,19 +83,20 @@ struct Agent : Pose {
   float getLifespan() {  return lifespan;  }
   void incrementLifespan(float amount) {
     lifespan += amount;
-    colorTransparency = lifespan * 0.1;
-    agentColor.a = colorTransparency;
+    agentColor.a = lifespan;
   }
   void incrementFitness(float value) {  fitnessValue += value;  }
 
   // methods
   bool checkReproduction(float reproductionProbabilityThreshold) {
-    if (lifespan < (rnd::uniform() * 10)) {
+    canReproduce = false; // always false to start the round
+    if (lifespan < (rnd::uniform())) {
       //roll for probability of reproduction
       float reproductionProbability = rnd::uniform();
+      //cout << "fitness value: " << fitnessValue << endl;
       reproductionProbability += fitnessValue; // boids with a greater fitness value have a higher reproductive chance
       
-      //cout << reproductionProbability << " " << reproductionThreshold << endl;
+      //cout << reproductionProbability << " " << reproductionProbabilityThreshold << endl;
       if (reproductionProbability > reproductionProbabilityThreshold) { //random chance to reproduce
         canReproduce = true;
       }
@@ -122,11 +122,11 @@ struct Agent : Pose {
   }
 
   float setChirp() {
-    cout << "setting chirp" << endl;
+    //cout << "setting chirp" << endl;
     //these values will be individualized
     osc.amp(amplitude);
     osc.freq(frequency);
-    osc.length(colorTransparency); //length of chirp proportional to lifespan of agent
+    osc.length(lifespan); //length of chirp proportional to lifespan of agent
   }
 
   float getSound() { return osc().r; }

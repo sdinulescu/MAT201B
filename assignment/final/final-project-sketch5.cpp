@@ -36,16 +36,19 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //flocking params
   Parameter backgroundColor{"/backgroundColor", "", 0.1, "", 0, 1};
   Parameter rate{"/rate", "", 0.015, "", 0.01, 0.1};
-  Parameter localRadius{"/localRadius", "", 0.2, "", 0.01, 1.0};
+  Parameter localRadius{"/localRadius", "", 0.18, "", 0.01, 1.0};
   Parameter size{"/size", "", 1.5, "", 0.0, 4.0};
   Parameter ratio{"/ratio", "", 1.5, "", 0.0, 4.0};
   //evolution params
-  Parameter reproductionDistanceThreshold{"/reproductionDistanceThreshold", "", 0.1, "", 0.0, 1.0};
-  Parameter foodDistanceThreshold{"/foodDistanceThreshold", "", 0.1, "", 0.0, 1.0}; // have to be this far away to eat food
+  Parameter reproductionDistanceThreshold{"/reproductionDistanceThreshold", "", 0.05, "", 0.0, 1.0};
+  Parameter foodDistanceThreshold{"/foodDistanceThreshold", "", 0.05, "", 0.0, 1.0}; // have to be this far away to eat food
   Parameter decreaseLifespanAmount{"/decreaseLifespanAmount", "", 0.01, "", 0.0, 1.0};
-  Parameter reproductionProbabilityThreshold{"/reproductionProbabilityThreshold", "", 0.4, "", 0.0, 1.0};
-  Parameter framesPerSecond{"/framesPerSecond", "", 0, "", 0, 100};
+  Parameter reproductionProbabilityThreshold{"/reproductionProbabilityThreshold", "", 200, "", 0, 500};
   ParameterInt k{"/k", "", 5, "", 1, 15};
+
+  Parameter framesPerSecond{"/framesPerSecond", "", 0, "", 0, 100};
+  Parameter agentNum{"/agentNum", "", 0, "", 0, 1000};
+
   ControlGUI gui;
 
   std::shared_ptr<CuttleboneStateSimulationDomain<SharedState>>
@@ -74,10 +77,10 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void initGuiAndPassParams() {
     //gui
-    gui << backgroundColor << rate << localRadius << size 
+    gui << backgroundColor << rate << localRadius << k << size 
         << ratio << reproductionDistanceThreshold << foodDistanceThreshold 
         << decreaseLifespanAmount << reproductionProbabilityThreshold 
-        << framesPerSecond << k;
+        << framesPerSecond << agentNum;
     gui.init();
   }
 
@@ -203,10 +206,9 @@ class MyApp : public DistributedAppWithState<SharedState>  {
                 //Vec3f c = Vec3f(  agents[i].center + agents[j].center  ) / 2;
                 Vec3f m = Vec3f(  (agents[i].moveRate + agents[j].moveRate) / 2  );
                 Vec3f t = Vec3f(  (agents[i].turnRate + agents[j].turnRate) / 2  );
-                Vec3f r = Vec3f(  (agents[i].randomFlocking + agents[j].randomFlocking)/2  );
                 Color col = (  agents[i].agentColor + agents[j].agentColor  ) / 2;
                 Vec3f c = Vec3f(col.r, col.g, col.b);
-                Agent a(p, o, m, t, r, c);
+                Agent a(p, o, m, t, c);
                 agents.push_back(a);
               }
             }
@@ -318,12 +320,12 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       DrawableAgent a(agents[i].pos(), agents[i].uf(), agents[i].uu(), agents[i].agentColor);
       state().dAgents[i] = a;
     }
-    if (agents.size() < MAX_AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
-      for (int i = agents.size(); i < MAX_AGENT_NUM; i++) {
-        DrawableAgent a(Vec3f(0, 0, 0), Vec3f(0, 0, 0), Vec3f(0, 0, 0), Color(0));
-        state().dAgents[i] = a;
-      }
-    }
+    // if (agents.size() < MAX_AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
+    //   for (int i = agents.size(); i < MAX_AGENT_NUM; i++) {
+    //     DrawableAgent a(Vec3f(0, 0, 0), Vec3f(0, 0, 0), Vec3f(0, 0, 0), Color(0));
+    //     state().dAgents[i] = a;
+    //   }
+    // }
 
     //set the environment
     //cout << field.food.size() << endl;
@@ -333,13 +335,13 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       DrawableFood f(field.food[i].getPosition(), field.food[i].getSize(), field.food[i].getColor());
       state().dFood[i] = f;
     }
-    if (field.food.size() < MAX_FOOD_NUM) { // if the vector is smaller than the Drawable Agent array capacity
-      //cout << "less food" << endl;
-      for (int i = field.food.size(); i < MAX_FOOD_NUM; i++) {
-        DrawableFood f(Vec3f(0, 0, 0), 0, Color(0, 0, 0, 0));
-        state().dFood[i] = f;
-      }
-    }
+    // if (field.food.size() < MAX_FOOD_NUM) { // if the vector is smaller than the Drawable Agent array capacity
+    //   //cout << "less food" << endl;
+    //   for (int i = field.food.size(); i < MAX_FOOD_NUM; i++) {
+    //     DrawableFood f(Vec3f(0, 0, 0), 0, Color(0, 0, 0, 0));
+    //     state().dFood[i] = f;
+    //   }
+    // }
 
     //set the other state vars
     state().cameraPose.set(nav());
@@ -350,25 +352,31 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   //visualize
   void visualizeAgents() { // visualize the agents, update meshes using DrawableAgent in state (for ALL screens)
+    agentMesh.reset();
     for (unsigned i = 0; i < agents.size(); i++) {
-      agentMesh.vertices()[i] = state().dAgents[i].position;
-      agentMesh.normals()[i] = state().dAgents[i].forward;
-      const Vec3d& up(state().dAgents[i].up);
-      agentMesh.colors()[i].set(state().dAgents[i].agentColor.r, state().dAgents[i].agentColor.b, state().dAgents[i].agentColor.g, state().dAgents[i].agentColor.a);
+      
+      agentMesh.vertex(state().dAgents[i].position);
+      agentMesh.normal(state().dAgents[i].forward);
+      //const Vec3d& up(state().dAgents[i].up);
+      agentMesh.color(state().dAgents[i].agentColor.r, state().dAgents[i].agentColor.b, state().dAgents[i].agentColor.g, state().dAgents[i].agentColor.a);
       //cout << "color " << state().dAgents[i].colorTransparency << endl;
     }
-    if (agents.size() < MAX_AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
-      for (int i = agents.size(); i < MAX_AGENT_NUM; i++) {
-        agentMesh.colors()[i].set(0.0f, 0.0f, 0.0f, 0.0f); //don't draw that agent
-      }
-    }
+    // if (agents.size() < MAX_AGENT_NUM) { // if the vector is smaller than the Drawable Agent array capacity
+    //   for (int i = agents.size(); i < MAX_AGENT_NUM; i++) {
+    //     agentMesh.colors()[i].set(0.0f, 0.0f, 0.0f, 0.0f); //don't draw that agent
+    //   }
+    // }
   }
 
   void visualizeFood() { // visualize the food, update meshes using DrawableFood in state (for ALL screens)
-    for (unsigned i = 0; i < MAX_FOOD_NUM; i++) {
+    //foodMesh.reset();
+    for (unsigned i = 0; i < field.food.size(); i++) {
       foodMesh.vertices()[i] = state().dFood[i].position;
       foodMesh.colors()[i].set(state().dFood[i].color.r, state().dFood[i].color.g, state().dFood[i].color.b);
       foodMesh.texCoord(state().dFood[i].size, 0);
+      // foodMesh.vertex(state().dFood[i].position);
+      // foodMesh.color(state().dFood[i].color.r, state().dFood[i].color.g, state().dFood[i].color.b);
+      // foodMesh.texCoord(state().dFood[i].size, 0);
     }
   }
 
@@ -387,6 +395,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       framesPerSecond = frameCount;
       frameCount = 0;
     }
+    agentNum = agents.size();
     if (freeze == false) {
       if (cuttleboneDomain->isSender()) {
         //update the food
@@ -476,6 +485,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     g.shader(agentShader);
     g.shader().uniform("size", state().size * 0.03);
     g.shader().uniform("ratio", state().ratio * 0.2);
+    //cout << "mesh size: " << agentMesh.vertices().size() << endl;
     g.draw(agentMesh);
   }
 
@@ -483,6 +493,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     //food shader
     g.shader(foodShader);
     g.shader().uniform("pointSize", state().size * 0.005);
+    //cout << foodMesh.vertices().size() << endl;
     g.draw(foodMesh);
   }
 
