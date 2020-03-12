@@ -99,6 +99,7 @@ struct Agent : Pose {
       //cout << reproductionProbability << " " << reproductionProbabilityThreshold << endl;
       if (reproductionProbability > reproductionProbabilityThreshold) { //random chance to reproduce
         canReproduce = true;
+        fitnessValue = fitnessValue * 0.9; // need to cut their fitness a bit because they have to take care of a "child"
       }
     }
   }
@@ -130,6 +131,18 @@ struct Agent : Pose {
   }
 
   float getSound() { return osc().r; }
+
+  float randomCull(Vec3f cullPosition, float radius) {
+    float cullingThreshold = 0.8;
+    float distance = (pos() - cullPosition).mag();
+
+    if (distance < radius) { //if within the culling radius, randomly kill
+      if (rnd::uniform() > cullingThreshold) {
+        lifespan = 0;
+        //cout << "culled" << endl;
+      }
+    }
+  }
 };
 
 //**************************

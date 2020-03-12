@@ -37,9 +37,6 @@ struct Food { //food in the field
 };
 
 struct Field {
-// TO DO -- flesh this out
-// include some environmental effects that can be positive or negative for agents in the surrounding area
-
   int amountOfFood = 500;
   vector<Food> food;
 

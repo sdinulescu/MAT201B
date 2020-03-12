@@ -32,6 +32,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   const float FITNESS_CUTOFF = 10.0;
   vector<Agent> agents;
   bool freeze = false;
+  float timing = rnd::uniform(1,1000);
+  unsigned counter = 0;
   //Gui params
   //flocking params
   Parameter backgroundColor{"/backgroundColor", "", 0.1, "", 0, 1};
@@ -59,6 +61,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   Mesh agentMesh;
   Mesh foodMesh;
+  Mesh cullMesh;
 
   Field field;
 
@@ -128,6 +131,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     //mesh
     agentMesh.primitive(Mesh::POINTS);
     foodMesh.primitive(Mesh::POINTS);
+    cullMesh.primitive(Mesh::POINTS);
 
     field.resetField(); //initializes the field (fills the food array, initializes forces)
     initFoodMesh(); //init the food mesh with food vector
@@ -227,6 +231,13 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void assignFitness() { //assign a fitness value to each agent based on specific rules
     for (int i = 0; i < agents.size(); i++) {
+      //first, what is it's fitness value??
+      float valueScalar = 1.0f;
+      //cout << agents[i].fitnessValue << endl;
+      if (agents[i].fitnessValue > 500) {
+        valueScalar *= 10;
+      }
+
       float value = 0.0;
       //cout << "agent flockcount" << agents[i].flockCount << endl;
       //flock count
@@ -247,6 +258,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       } else {
         value += rnd::uniform() * agents[i].turnRate.mag();
       }
+
+      value *= valueScalar;
       
       agents[i].incrementFitness(value); //change agent's fitness value
       agents[i].evaluateFitness(FITNESS_CUTOFF);
@@ -260,6 +273,28 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         agents.erase(agents.begin()+i);
         //cout << agents.size() << endl;
       }
+    }
+  }
+
+  void cull() {
+    if (counter % (int)timing == 0) { //cull
+      cout << "cull" << endl;
+      Vec3f cullPosition = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
+      float radius = rnd::uniform() * 100.0;
+
+      //add a cull to the mesh
+      cullMesh.reset();
+      cullMesh.vertex(cullPosition);
+      cullMesh.color(Color(rnd::uniform(), rnd::uniform(), rnd::uniform(), 0.3));
+      cullMesh.texCoord(radius, 0);
+
+      cout << cullMesh.vertices().size() << endl;
+
+      for (int i = 0; i < agents.size(); i++) {
+        agents[i].randomCull(cullPosition, radius); //cull every second
+      }
+
+      timing = rnd::uniform(1,1000); //reset timing
     }
   }
 
@@ -359,12 +394,12 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   //***********************************************************************
   //update loop
-   
   //frame counter 
   int frameCount{0};
   float timer{0};
 
   void onAnimate(double dt) override {
+    counter++;
     timer += dt;
     frameCount++;
     if (timer > 1) {
@@ -389,6 +424,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
         checkAgentDeath();
         eatFood();
+
+        cull();
 
         //update field
         field.moveFood(); //move the food
@@ -472,6 +509,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     g.shader().uniform("pointSize", state().size * 0.005);
     //cout << foodMesh.vertices().size() << endl;
     g.draw(foodMesh);
+    g.draw(cullMesh);
   }
 
   void onDraw(Graphics& g) override {
