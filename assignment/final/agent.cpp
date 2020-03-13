@@ -22,6 +22,7 @@ struct Agent : Pose {
   float lifespan; // agents die after a certain point
   bool canReproduce; //true if it can reproduce, false if it can't
   Color agentColor;
+  bool isDead;
 
   //flocking attributes
   Vec3f heading; //heading from POV of agent (sum of all the headings, then divide by the count)
@@ -46,6 +47,7 @@ struct Agent : Pose {
   //constructors
   Agent() { reset(); } //constructor, initialize with a position and a forward
   Agent(Vec3f p, Vec3f o, Vec3f m, Vec3f t, Vec3f c) { //everything that gets inherited
+    isDead = false;
     pos(p);
     faceToward(o);
     moveRate = m;
@@ -66,6 +68,7 @@ struct Agent : Pose {
     chirplet.freq(startFrequency, endFrequency);
   }
   void reset() { //give agents a pos and a forward
+    isDead = false;
     pos(Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()));
     faceToward(Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()));
     randomFlocking = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
@@ -107,6 +110,20 @@ struct Agent : Pose {
         fitnessValue = fitnessValue * 0.9; // need to cut their fitness a bit because they have to take care of a "child"
       }
     }
+  }
+
+  void setDeathState() {
+    isDead = true;
+    pos() = Vec3f(0, 0, 0);
+    heading = Vec3f(0, 0 ,0);
+    center = Vec3f(0, 0, 0);
+    agentColor = Color(0 ,0 ,0, 0);
+    moveRate = Vec3f(0, 0, 0);
+    turnRate = Vec3f(0, 0, 0);
+    randomFlocking = Vec3f(0, 0, 0);
+    fitnessValue = 0;
+    startCheckingFitness = 0;
+    canReproduce = false;
   }
 
   void evaluateFitness(float fitnessCutoff) {

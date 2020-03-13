@@ -30,7 +30,7 @@ HashSpace space(6, MAX_AGENT_NUM);
 class MyApp : public DistributedAppWithState<SharedState>  {
   //global vars/containers
   const float FITNESS_CUTOFF = 10.0;
-  vector<Agent> agents;
+  Agent agents[MAX_AGENT_NUM];
   bool freeze = false;
   float timing = rnd::uniform(1,1000);
   unsigned counter = 0;
@@ -49,7 +49,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   ParameterInt k{"/k", "", 5, "", 1, 15};
 
   Parameter framesPerSecond{"/framesPerSecond", "", 0, "", 0, 100};
-  Parameter agentNum{"/agentNum", "", 0, "", 0, 1000};
+  Parameter aliveAgents{"/aliveAgents", "", 0, "", 0, 1000}; //TO DO: USE THIS TO KEEP TRACK OF HOW MANY ARE ALIVE
 
   ControlGUI gui;
 
@@ -83,14 +83,14 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     gui << backgroundColor << rate << localRadius << k << size 
         << ratio << reproductionDistanceThreshold << foodDistanceThreshold 
         << decreaseLifespanAmount << reproductionProbabilityThreshold 
-        << framesPerSecond << agentNum;
+        << framesPerSecond << aliveAgents;
     gui.init();
   }
 
   void initAgents() {
-    for (int i = agents.size(); i < MAX_AGENT_NUM; i++) {
+    for (int i = MAX_AGENT_NUM; i < MAX_AGENT_NUM; i++) {
       Agent a;
-      agents.push_back(a);
+      agents[i] = a;
 
       space.move(i, a.pos() * space.dim()); //push agents into the hash space
       
@@ -144,7 +144,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //Everything needed for onAnimate()
 
   void eatFood() { // if the agent is at a specific location in the environment and finds food, then increase it's lifespan
-    for (int i = 0; i < agents.size(); i++) { //check each of the agents
+    for (int i = 0; i < MAX_AGENT_NUM; i++) { //check each of the agents
+      if (agents[i].isDead) { continue; }
       for (int j = 0; j < field.getAmountOfFood(); j++) { //check each of the food particles
         float distance = Vec3f(agents[i].pos() - field.food[j].getPosition()).mag();
         if (distance < foodDistanceThreshold) { //if the agent is this close to the food particle
@@ -167,7 +168,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void applyForces() {
     //take an agent, find out the grid space that it is in
-    for (int i = 0; i < agents.size(); i++) {
+    for (int i = 0; i < MAX_AGENT_NUM; i++) {
+      if (agents[i].isDead) { continue; }
       int index = field.findGridBlock(agents[i].pos()); //find the grid that it is in
       //cout << index << endl;
       Vec3f forceField = field.getForceVector(index); //get the force vector to apply to the agent
@@ -180,7 +182,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void reproduce() { 
     //go through and roll for all agents -> reproduction
     int boidReproductionCount = 0;
-    for (int i = 0; i < agents.size(); i++) {
+    for (int i = 0; i < MAX_AGENT_NUM; i++) {
+      if (agents[i].isDead) { continue; }
       agents[i].checkReproduction(reproductionProbabilityThreshold);
       if (agents[i].canReproduce) {
         boidReproductionCount++;
@@ -189,7 +192,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     //cout << "boids that can reproduce: " << boidReproductionCount << endl;
     int newAgentCount = 0;
 
-    for (int i = 0; i < agents.size(); i++) {
+    for (int i = 0; i < MAX_AGENT_NUM; i++) {
       if (agents[i].canReproduce) {
         //check nearest neighbor
 
@@ -198,31 +201,35 @@ class MyApp : public DistributedAppWithState<SharedState>  {
                           space.maxRadius() * localRadius);
         for (int j = 0; j < results; j++) {
           int id = query[j]->id;
-          if (agents[j].canReproduce) {
-            float distance = Vec3f(  agents[j].pos() - agents[i].pos()  ).mag(); //check their distance
-            if (distance < reproductionDistanceThreshold) { //if they are close, reproduce
-              if (newAgentCount < (MAX_AGENT_NUM - agents.size())) {
-                newAgentCount++;
-                //cout << "reproduced!" << endl;
-                Vec3f p = Vec3f(  (agents[i].pos() + agents[j].pos()) / 2  );
-                Vec3f o = Vec3f(  (agents[i].uf() + agents[j].uf()) / 2  );
-                //Vec3f h = Vec3f(  agents[i].heading + agents[j].heading  ) / 2;
-                //Vec3f c = Vec3f(  agents[i].center + agents[j].center  ) / 2;
-                Vec3f m = Vec3f(  (agents[i].moveRate + agents[j].moveRate) / 2  );
-                Vec3f t = Vec3f(  (agents[i].turnRate + agents[j].turnRate) / 2  );
-                Color col = (  agents[i].agentColor + agents[j].agentColor  ) / 2;
-                Vec3f c = Vec3f(col.r, col.g, col.b);
-                Agent a(p, o, m, t, c);
-                agents.push_back(a);
-              }
+          if (agents[id].isDead) { continue; }
+          if (agents[id].canReproduce == false) { continue; }
+          //only reproduce if the nearest neighbor is alive AND can also reproduce
+          
+          float distance = Vec3f(  agents[id].pos() - agents[i].pos()  ).mag(); //check their distance
+          if (distance < reproductionDistanceThreshold) { //if they are close enough, reproduce
+            if (newAgentCount < MAX_AGENT_NUM - aliveAgents) {
+              newAgentCount++;
+              //cout << "reproduced!" << endl;
+              Vec3f p = Vec3f(  (agents[i].pos() + agents[j].pos()) / 2  );
+              Vec3f o = Vec3f(  (agents[i].uf() + agents[j].uf()) / 2  );
+              //Vec3f h = Vec3f(  agents[i].heading + agents[j].heading  ) / 2;
+              //Vec3f c = Vec3f(  agents[i].center + agents[j].center  ) / 2;
+              Vec3f m = Vec3f(  (agents[i].moveRate + agents[j].moveRate) / 2  );
+              Vec3f t = Vec3f(  (agents[i].turnRate + agents[j].turnRate) / 2  );
+              Color col = (  agents[i].agentColor + agents[j].agentColor  ) / 2;
+              Vec3f c = Vec3f(col.r, col.g, col.b);
+              Agent a(p, o, m, t, c);
+              agents[i] = a;
             }
+          
           }
         }
       }
     }
 
     //reset reproduction boolean
-    for (int i = 0; i < agents.size(); i++) {
+    for (int i = 0; i < MAX_AGENT_NUM; i++) {
+      if (agents[i].isDead) { continue; }
       agents[i].canReproduce = false;
     }
     //cout << "new agents this cycle: " << newAgentCount << endl;
@@ -230,7 +237,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void assignFitness() { //assign a fitness value to each agent based on specific rules
-    for (int i = 0; i < agents.size(); i++) {
+    for (int i = 0; i < MAX_AGENT_NUM; i++) {
+      if (agents[i].isDead) { continue; }
       //first, what is it's fitness value??
       float valueScalar = 1.0f;
       //cout << agents[i].fitnessValue << endl;
@@ -266,14 +274,15 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
-  //check if the agent is dead
+  //check if the agent is dead -> DO THIS FOR ALL AGENTS
   void checkAgentDeath() {
-    for (int i = 0; i < agents.size(); i++) {
-      if (agents[i].lifespan <= 0) {
-        agents.erase(agents.begin()+i);
-        //cout << agents.size() << endl;
-      }
+    int agentCounter = 0;
+    for (int i = 0; i < MAX_AGENT_NUM; i++) {
+      if (agents[i].lifespan <= 0) { agents[i].setDeathState(); } 
+      else { agentCounter++; }
     }
+
+    aliveAgents = agentCounter;
   }
 
   void cull() {
@@ -288,7 +297,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       cullMesh.color(Color(rnd::uniform(), rnd::uniform(), rnd::uniform(), 0.3));
       cullMesh.texCoord(radius, 0);
 
-      for (int i = 0; i < agents.size(); i++) {
+      for (int i = 0; i < MAX_AGENT_NUM; i++) {
+        if (agents[i].isDead) { continue; }
         agents[i].randomCull(cullPosition, radius); //cull every second
       }
 
@@ -296,18 +306,10 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
-  // respawn agents if they go too far
-  void respawn() {
-    for (unsigned i = 0; i < agents.size(); i++) {
-        if (agents[i].pos().mag() > 1.1) {
-            agents[i].reset();
-        }
-    }
-  }
-
   //flocking
   void calcFlocking() {
-    for (unsigned i = 0; i < agents.size(); i++) {
+    for (unsigned i = 0; i < MAX_AGENT_NUM; i++) {
+      if (agents[i].isDead) { continue; }
       agents[i].incrementLifespan(-1 * decreaseLifespanAmount);
       Vec3f avgHeading(0, 0, 0);
       Vec3f centerPos(0, 0, 0);
@@ -318,6 +320,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
                           space.maxRadius() * localRadius);
       for (int j = 0; j < results; j++) {
         int id = query[j]->id;
+        if (agents[id].isDead) { continue; } // only look at the neighbors that are alive!
         avgHeading += agents[id].uf() + agents[id].randomFlocking;
         centerPos += agents[id].pos();
       }
@@ -333,7 +336,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void alignmentAndCohesion() { //agent update function
     //alignment and cohesion from boids algorithm
-    for (unsigned i = 0; i < agents.size(); i++) {
+    for (unsigned i = 0; i < MAX_AGENT_NUM; i++) {
+      if (agents[i].isDead) { continue; }
       agents[i].pos().lerp(agents[i].center.normalize() + agents[i].uf(), agents[i].moveRate.mag() * rate);
       space.move(i, agents[i].pos() * space.dim());
       agents[i].faceToward( (agents[i].heading + agents[i].center + agents[i].uf()).normalize() * agents[i].turnRate.mag() ); // point agents in the direction of their heading
@@ -344,7 +348,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void setState() {
     //copy simulation agents into drawable agents for rendering
     //cout << agents.size() << endl;
-    for (unsigned i = 0; i < agents.size(); i++) {
+    for (unsigned i = 0; i < MAX_AGENT_NUM; i++) { // set state for all the agents, no matter if they are dead or not
       DrawableAgent a(agents[i].pos(), agents[i].uf(), agents[i].uu(), agents[i].agentColor);
       state().dAgents[i] = a;
     }
@@ -368,7 +372,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //visualize
   void visualizeAgents() { // visualize the agents, update meshes using DrawableAgent in state (for ALL screens)
     agentMesh.reset();
-    for (unsigned i = 0; i < agents.size(); i++) {
+    for (unsigned i = 0; i < MAX_AGENT_NUM; i++) {
       agentMesh.vertex(state().dAgents[i].position);
       agentMesh.normal(state().dAgents[i].forward);
       agentMesh.color(state().dAgents[i].agentColor.r, state().dAgents[i].agentColor.b, state().dAgents[i].agentColor.g, state().dAgents[i].agentColor.a);
@@ -400,7 +404,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       framesPerSecond = frameCount;
       frameCount = 0;
     }
-    agentNum = agents.size();
+  
     if (freeze == false) {
       if (cuttleboneDomain->isSender()) {
         //update the food
@@ -439,13 +443,10 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   // key pressed
 
   void reset() { //reset agents
-    for (int i = 0; i < agents.size(); i++) {
+    for (int i = 0; i < MAX_AGENT_NUM; i++) {
       agents[i].reset();
     }
-    for (int i = agents.size(); i < MAX_AGENT_NUM; i++) {
-      Agent a; 
-      agents.push_back(a);
-    }
+
 
     foodMesh.reset();
     field.resetField();
