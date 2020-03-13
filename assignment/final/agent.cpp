@@ -8,10 +8,111 @@
 
 using namespace al;
 
-//inherit from Sound Source -> try to find an example
-// could potentially have a Pose in it -> look at this
-
 //humans can locally pinpoint clicks, repeating buzzing signals
+
+// Impulse Generator struct taken from Pedal by Aaron Anderson and Kee Youn
+struct ImpulseGenerator {
+  float frequency, phase, period;
+  float maskChance;
+  float deviation, randomOffset;//deviation from periodicity
+  float currentSample;
+
+  ImpulseGenerator() {
+    setFrequency(1.0f);//one impulse per second
+    setPhase(0.0f);//initialize phase to 0
+    setDeviation(0.0f);//ensure periodicity
+    setMaskChance(0.0f);//no missing impulses
+    randomOffset = rnd::uniform(-period*0.5, period*0.5) * deviation;
+  }
+
+  ImpulseGenerator(float initialFrequency) {
+    setFrequency(initialFrequency);
+    setPhase(0.0f);//initialize phase to 0
+    setDeviation(0.0f);//ensure periodicity
+    setMaskChance(0.0f);//no missing impulses
+    randomOffset = rnd::uniform(-period*0.5, period*0.5) * deviation;
+  }
+
+  float generateSample(){
+    if(phase >= period+randomOffset){
+      float test = rnd::uniform(0.0f, 1.0f);
+      if(test > maskChance){
+        currentSample = 1.0f;
+        float halfPeriod = period*0.5f;
+        randomOffset = rnd::uniform(-halfPeriod, halfPeriod) * deviation;
+      }
+      phase -= period;
+    }else{
+      currentSample = 0.0f;
+      phase += 1.0f;//increase phase by 1 sample 
+    }
+    return currentSample;
+  }
+
+  void setFrequency(float newFrequency){
+    frequency = fabs(newFrequency);//no need for negative frequencies for this
+    period = 44100/frequency;//period in samples
+  }
+  void setPhase(float newPhase){
+      phase = newPhase*period;//conver from 0 - 1 to 0 - period
+  }
+  void setMaskChance(float newMaskChance){maskChance = newMaskChance;}
+  void setDeviation(float newDeviation){deviation = newDeviation;}
+
+  float getSample(){return currentSample;}
+  float getFrequency(){return frequency;}
+  float getMaskChance(){return maskChance;}
+  float getDeviation(){return deviation;}
+};
+
+struct Chirplet {
+  float centerFrequency;
+  float range;
+  float windowPosition;
+  float duration;
+  float currentSample;
+  float* windowPtr = nullptr;
+  int durationInSamples;
+  double windowPositionIncrement;
+  int windowArraySize = 1024;
+  bool active;
+
+  gam::Sine<float> osc;
+
+  Chirplet() {
+    centerFrequency = rnd::uniform(200, 1000);
+    range = centerFrequency * rnd::uniform(0.01, 0.5); //pick a range dependent on centerFrequency
+    //duration = 0.1;
+    duration = rnd::uniform(0.05, 0.2);
+    osc.freq((centerFrequency + range));
+    durationInSamples = duration * 44100;
+    windowPositionIncrement = 1.0/durationInSamples;
+    //cout << windowPositionIncrement << endl;
+    active = false;    
+  }
+
+  float generateSample(int index) { 
+    if (active && windowPtr != nullptr) {
+      currentSample = osc();
+      //cout << "wp: " << windowPosition << " arrSize " << windowArraySize << endl;
+      int index = int(windowPosition * windowArraySize);
+      //cout << "index: " << index << endl;
+      index = std::fmin(std::fmax(index, 0), 1024);
+      currentSample *= windowPtr[index];
+      //cout << "currentSample: " << currentSample << endl;
+      windowPosition = windowPosition + windowPositionIncrement;
+     //cout << "agent index: " << index << " windowPosition " << windowPosition << " wpIncrement " << windowPositionIncrement << endl;
+      if (windowPosition >= 1.0f) {
+        windowPosition = 0.0f;
+        active = false;
+      }
+    }
+    return currentSample; 
+  }
+
+  void setActive(bool a) { active = a; }
+  void setWindowPtr(float* wPtr) { windowPtr = wPtr; }
+};
 
 struct Agent : Pose {
   // Agent attributes
@@ -42,9 +143,10 @@ struct Agent : Pose {
   unsigned flockCount{1}; //how many neighbors?
 
   //agent sound
-  gam::Chirplet<> chirplet;  // a Gamma sine oscillator
-  float startFrequency;
-  float endFrequency;
+  // gam::Chirplet<> chirplet;  // a Gamma sine oscillator
+  ImpulseGenerator impulse;
+  Chirplet chirp;
+  float currentSample;
 
   //constructors
   Agent() { reset(); } //constructor, initialize with a position and a forward
@@ -56,18 +158,12 @@ struct Agent : Pose {
     turnRate = t;
     lifespan = rnd::uniform() * 10.0;
     agentColor = Color(c.x, c.y, c.z, lifespan);
-
     randomFlocking = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
-
     fitnessValue = 0.0;
     startCheckingFitness = rnd::uniformS()*10;
     canReproduce = false;
 
-    // // TO DO: CHANGE THESE VALUES TO MAKE THEM INHERITABLE
-    startFrequency = rnd::uniform(220, 880); 
-    endFrequency = rnd::uniform(220, 880);
-
-    chirplet.freq(startFrequency, endFrequency);
+    currentSample = 0.0f;
   }
   void reset() { //give agents a pos and a forward
     isDead = false;
@@ -82,11 +178,7 @@ struct Agent : Pose {
     startCheckingFitness = rnd::uniformS()*10.0;
     canReproduce = false;
 
-    //sound
-    startFrequency = rnd::uniform(220, 880);
-    endFrequency = rnd::uniform(220, 880);
-
-    chirplet.freq(startFrequency, endFrequency);
+    currentSample = 0.0f;
   }
 
   //getters and setters
@@ -138,14 +230,21 @@ struct Agent : Pose {
     }
   }
 
-  float nextSample() {
-    if (chirplet.done()) {
-      chirplet.freq(  startFrequency, endFrequency );
-      chirplet.length(1); //length of chirp proportional to lifespan of agent
-      startFrequency = endFrequency;
-      endFrequency = rnd::uniform(220, 880);
+  float nextSample(int index) {
+    if(impulse.generateSample() == 1.0f) { // start new chirp
+      chirp.setActive(true);
     }
-    return chirplet().r;
+    if (chirp.active) {
+      currentSample = chirp.generateSample(index);
+    }
+    // if (chirplet.done()) {
+    //   chirplet.freq(  startFrequency, endFrequency );
+    //   chirplet.length(1); //length of chirp proportional to lifespan of agent
+    //   startFrequency = endFrequency;
+    //   endFrequency = rnd::uniform(220, 880);
+    // }
+    // return chirplet().r;
+    return currentSample;
   }
 
   float randomCull(Vec3f cullPosition, float radius) {
