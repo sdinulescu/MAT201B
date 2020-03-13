@@ -39,9 +39,9 @@ struct Agent : Pose {
   unsigned flockCount{1}; //how many neighbors?
 
   //agent sound
-  gam::Chirplet<> osc;  // a Gamma sine oscillator
-  float frequency;
-  float amplitude;
+  gam::Chirplet<> chirplet;  // a Gamma sine oscillator
+  float startFrequency;
+  float endFrequency;
 
   //constructors
   Agent() { reset(); } //constructor, initialize with a position and a forward
@@ -60,8 +60,10 @@ struct Agent : Pose {
     canReproduce = false;
 
     // // TO DO: CHANGE THESE VALUES TO MAKE THEM INHERITABLE
-    frequency = rnd::uniform() * 500.0; 
-    amplitude = rnd::uniform(); 
+    startFrequency = rnd::uniform(220, 880); 
+    endFrequency = rnd::uniform(220, 880);
+
+    chirplet.freq(startFrequency, endFrequency);
   }
   void reset() { //give agents a pos and a forward
     pos(Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()));
@@ -75,8 +77,11 @@ struct Agent : Pose {
     startCheckingFitness = rnd::uniformS()*10.0;
     canReproduce = false;
 
-    frequency = rnd::uniform() * 500.0;
-    amplitude = rnd::uniform();
+    //sound
+    startFrequency = rnd::uniform(220, 880);
+    endFrequency = rnd::uniform(220, 880);
+
+    chirplet.freq(startFrequency, endFrequency);
   }
 
   //getters and setters
@@ -114,23 +119,15 @@ struct Agent : Pose {
     }
   }
 
-  void updateAgentSound(int numberOfFlockmates, float avgFreq) {
-    //set the amplitude
-    amplitude = amplitude + numberOfFlockmates * 0.1; //set the amplitude proportional to the number of flockmates
-    //set the frequency
-    frequency = avgFreq + (pos().mag()); //SOMETHING ISN'T WORKING HERE
-    //cout << amplitude << " " << frequency << endl;
+  float nextSample() {
+    if (chirplet.done()) {
+      chirplet.freq(  startFrequency, endFrequency );
+      chirplet.length(1); //length of chirp proportional to lifespan of agent
+      startFrequency = endFrequency;
+      endFrequency = rnd::uniform(220, 880);
+    }
+    return chirplet().r;
   }
-
-  float setChirp() {
-    //cout << "setting chirp" << endl;
-    //these values will be individualized
-    osc.amp(amplitude);
-    osc.freq(frequency);
-    osc.length(lifespan); //length of chirp proportional to lifespan of agent
-  }
-
-  float getSound() { return osc().r; }
 
   float randomCull(Vec3f cullPosition, float radius) {
     float cullingThreshold = 0.8;

@@ -4,7 +4,7 @@
  * This program is a simulated environment of flocking agents. 
  * Incorporating an evolutionary algorithm, as time progresses, we see changes in flocking shape.
  */
-
+  
 //allolib includes
 #include "al/app/al_DistributedApp.hpp"
 #include "al/math/al_Random.hpp"
@@ -278,7 +278,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void cull() {
     if (counter % (int)timing == 0) { //cull
-      cout << "cull" << endl;
+      //cout << "cull" << endl;
       Vec3f cullPosition = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
       float radius = rnd::uniform() * 100.0;
 
@@ -287,8 +287,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       cullMesh.vertex(cullPosition);
       cullMesh.color(Color(rnd::uniform(), rnd::uniform(), rnd::uniform(), 0.3));
       cullMesh.texCoord(radius, 0);
-
-      cout << cullMesh.vertices().size() << endl;
 
       for (int i = 0; i < agents.size(); i++) {
         agents[i].randomCull(cullPosition, radius); //cull every second
@@ -313,7 +311,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       agents[i].incrementLifespan(-1 * decreaseLifespanAmount);
       Vec3f avgHeading(0, 0, 0);
       Vec3f centerPos(0, 0, 0);
-      float avgFreq = 0.0;
       agents[i].flockCount = 0; //reset flock count
 
       HashSpace::Query query(k);
@@ -323,18 +320,14 @@ class MyApp : public DistributedAppWithState<SharedState>  {
         int id = query[j]->id;
         avgHeading += agents[id].uf() + agents[id].randomFlocking;
         centerPos += agents[id].pos();
-        avgFreq += agents[id].frequency;
       }
       if (results > 0) {
         avgHeading = avgHeading.normalize() / results;
         centerPos = centerPos.normalize() / results;
-        avgFreq /= results;
       }
       agents[i].flockCount = results;
       agents[i].heading = avgHeading;
       agents[i].center = centerPos;
-      
-      //agents[i].updateAgentSound(results, avgFreq);
     }
   }
 
@@ -475,17 +468,17 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void onSound(AudioIOData& io) override {
     while (io()) {
       float sound = 0.0;
-      for (int i = 0; i < agents.size(); i++) {
-        if (agents[i].osc.done()) {
-          agents[i].setChirp();
-        }
 
-        sound += agents[i].getSound();
-      }
-      sound /= agents.size();
+      // for (int i = 0; i < agents.size(); i++) {
+      //   sound += agents[i].nextSample();
+      // }
+      // sound /= MAX_AGENT_NUM;
+      // sound /= 3;
+      
       // cap sound
-      if (sound >  5) { sound = 5; }
-      if (sound < 0) { sound = 0; }
+      if (sound >  1) { sound = 1; }
+      if (sound < -1) { sound = -1; }
+
       //cout << sound << endl;
       io.out(0) = io.out(1) = sound;    // write the signal to channels 0 and 1
     }
@@ -533,7 +526,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 int main() {
   MyApp app;
     // Enable audio with 2 channels of output.
-  app.configureAudio(44100, 512, 2, 0);
+  app.configureAudio(44100, 2048, 2, 0);
   app.start();
 }
 
