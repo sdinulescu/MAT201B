@@ -24,6 +24,8 @@ struct Agent : Pose {
   Color agentColor;
   bool isDead;
 
+  int cyclesBeforeAteFood = 0;
+
   //flocking attributes
   Vec3f heading; //heading from POV of agent (sum of all the headings, then divide by the count)
   Vec3f center;  //position in worldspace (sum of all the positions, then divide by the count)

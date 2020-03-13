@@ -31,6 +31,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //global vars/containers
   const float FITNESS_CUTOFF = 10.0;
   Agent agents[MAX_AGENT_NUM];
+  vector<Agent> tempNewAgents;
+
   bool freeze = false;
   float timing = rnd::uniform(1,1000);
   unsigned counter = 0;
@@ -146,14 +148,20 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void eatFood() { // if the agent is at a specific location in the environment and finds food, then increase it's lifespan
     for (int i = 0; i < MAX_AGENT_NUM; i++) { //check each of the agents
       if (agents[i].isDead) { continue; }
+      bool foundFood = false;
       for (int j = 0; j < field.getAmountOfFood(); j++) { //check each of the food particles
+        if (foundFood) { continue; } // don't do anything if that agent already ate food
         float distance = Vec3f(agents[i].pos() - field.food[j].getPosition()).mag();
         if (distance < foodDistanceThreshold) { //if the agent is this close to the food particle
           //cout << "food @ index " << i << " consumed!" << endl;
           field.food[j].isConsumed = true;
           agents[i].incrementLifespan(field.food[j].getSize()); //increase agent's lifespan by the food size
-        }
+          agents[i].cyclesBeforeAteFood = 0; // reset food cycle counter
+          foundFood = true;
+        } else { } //increment cycles counter
       }
+
+      if (foundFood == false) { agents[i].cyclesBeforeAteFood++; }
     }
   }
 
@@ -180,22 +188,11 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   //reproduce between two boids
   void reproduce() { 
-    //go through and roll for all agents -> reproduction
-    int boidReproductionCount = 0;
     for (int i = 0; i < MAX_AGENT_NUM; i++) {
       if (agents[i].isDead) { continue; }
       agents[i].checkReproduction(reproductionProbabilityThreshold);
       if (agents[i].canReproduce) {
-        boidReproductionCount++;
-      }
-    }
-    //cout << "boids that can reproduce: " << boidReproductionCount << endl;
-    int newAgentCount = 0;
-
-    for (int i = 0; i < MAX_AGENT_NUM; i++) {
-      if (agents[i].canReproduce) {
         //check nearest neighbor
-
         HashSpace::Query query(k);
         int results = query(space, agents[i].pos() * space.dim(),
                           space.maxRadius() * localRadius);
@@ -204,12 +201,11 @@ class MyApp : public DistributedAppWithState<SharedState>  {
           if (agents[id].isDead) { continue; }
           if (agents[id].canReproduce == false) { continue; }
           //only reproduce if the nearest neighbor is alive AND can also reproduce
-          
+          //cout << "both agents can reproduce... will they make spawn???" << endl;
           float distance = Vec3f(  agents[id].pos() - agents[i].pos()  ).mag(); //check their distance
           if (distance < reproductionDistanceThreshold) { //if they are close enough, reproduce
-            if (newAgentCount < MAX_AGENT_NUM - aliveAgents) {
-              newAgentCount++;
-              //cout << "reproduced!" << endl;
+          //cout << tempNewAgents.size() << endl;
+            if (tempNewAgents.size() < MAX_AGENT_NUM - aliveAgents) {
               Vec3f p = Vec3f(  (agents[i].pos() + agents[j].pos()) / 2  );
               Vec3f o = Vec3f(  (agents[i].uf() + agents[j].uf()) / 2  );
               //Vec3f h = Vec3f(  agents[i].heading + agents[j].heading  ) / 2;
@@ -219,21 +215,17 @@ class MyApp : public DistributedAppWithState<SharedState>  {
               Color col = (  agents[i].agentColor + agents[j].agentColor  ) / 2;
               Vec3f c = Vec3f(col.r, col.g, col.b);
               Agent a(p, o, m, t, c);
-              agents[i] = a;
+              tempNewAgents.push_back(a);
+              //agents[i] = a; //WHERE DO WE STORE IT???
+              //cout << "agent created! " << endl;
             }
-          
           }
         }
       }
+      agents[i].canReproduce = false;     //reset reproduction boolean
     }
 
-    //reset reproduction boolean
-    for (int i = 0; i < MAX_AGENT_NUM; i++) {
-      if (agents[i].isDead) { continue; }
-      agents[i].canReproduce = false;
-    }
-    //cout << "new agents this cycle: " << newAgentCount << endl;
-    //cout << "--------------------" << endl;
+    //cout << "baby number: " << tempNewAgents.size() << endl;
   }
 
   void assignFitness() { //assign a fitness value to each agent based on specific rules
@@ -277,9 +269,18 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //check if the agent is dead -> DO THIS FOR ALL AGENTS
   void checkAgentDeath() {
     int agentCounter = 0;
+    int tempIndex = 0;
     for (int i = 0; i < MAX_AGENT_NUM; i++) {
-      if (agents[i].lifespan <= 0) { agents[i].setDeathState(); } 
-      else { agentCounter++; }
+      //cout << agents[i].cyclesBeforeAteFood << endl;
+      if (agents[i].lifespan <= 0 || (agents[i].cyclesBeforeAteFood > 600) ) { //if their lifespan is 0 or they haven't eaten food in 10 seconds, kill
+        if (tempNewAgents.size() > 0 && i <= tempNewAgents.size()) { 
+          agents[i] = tempNewAgents[tempIndex]; //new agents are added from this vector in order of them being "born"
+          tempNewAgents.erase(tempNewAgents.begin() + tempIndex); // remove the one that was just added from the temp vector
+          agentCounter++;
+          //cout << "a baby was added!" << endl;
+        } 
+        else { agents[i].setDeathState(); }
+      } else { agentCounter++; }
     }
 
     aliveAgents = agentCounter;
