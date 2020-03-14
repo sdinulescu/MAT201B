@@ -429,9 +429,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
         assignFitness();
         reproduce();
-
-        //respawn(); // make this a GUI toggle potentially
-
+        
         checkAgentDeath();
         eatFood();
 

@@ -5,12 +5,10 @@
 
 #pragma once
 #include "Gamma/Oscillator.h"
-
 using namespace al;
-
-//humans can locally pinpoint clicks, repeating buzzing signals
-
-// Impulse Generator struct taken from Pedal by Aaron Anderson and Kee Youn
+// ************************************************************
+// Impulse Generator struct taken from Pedal, by Aaron Anderson
+// ************************************************************
 struct ImpulseGenerator {
   float frequency, phase, period;
   float maskChance;
@@ -64,36 +62,38 @@ struct ImpulseGenerator {
   float getMaskChance(){return maskChance;}
   float getDeviation(){return deviation;}
 };
-
+// ********
+// Chirplet
+// ********
 struct Chirplet {
-  float centerFrequency;
-  float terminalFrequency;
-  float frequencyIncrement;
-  float range; //unit in octaves
-  bool up;
-  float windowPosition;
-  float duration;
-  float currentSample;
-  float* windowPtr = nullptr;
-  int durationInSamples;
-  double windowPositionIncrement;
-  int windowArraySize = 1024;
-  // bool active;
+  float centerFrequency; //starting frequency of chirplet
+  float terminalFrequency; //ending frequency of chirplet
+  float frequencyIncrement; //how much the starting frequency changes every sample
+  float range; //unit in octaves, determines the terminal frequency
+  bool up; //which direction is the chirplet chirping?
+  float windowPosition; //position in the sample window, 0 to 1
+  float duration; //duration (seconds) of the chirplet
+  float currentSample; //which sample are we on?
+  float* windowPtr = nullptr; //pass the hanning window here (one for all agents)
+  int durationInSamples; //duration (seconds) * sampleRate
+  double windowPositionIncrement; //how much are we incrementing the window?
+  int windowArraySize = 1024; //how big the window data is
+  bool active; //whether the chirplet is active or not
 
-  gam::Sine<float> osc;
+  gam::Sine<float> osc; //one sine tone
 
   Chirplet() { reset(); }
 
   void reset() {
     centerFrequency = rnd::uniform(400.0f, 500.0f);
-    range = 2.0f; //can only go one octave up or down
+    range = 4.0; //can only go one octave up or down
     float rand = rnd::uniformS();
     if (rand > 0) { up = true; } else { up = false; } // if it is positive, go upward. else, go downward
     if (up) { terminalFrequency = centerFrequency * range; } 
     else { terminalFrequency = centerFrequency / range; }
     //cout << "center: " << centerFrequency << " terminal: " << terminalFrequency << endl;
     //will go one octave above no matter what
-    duration = rnd::uniform(0.1, 1.9);
+    duration = rnd::uniform(0.1, 0.3);
     // osc.freq((centerFrequency + range));
     durationInSamples = duration * 44100;
     frequencyIncrement = (terminalFrequency - centerFrequency)/durationInSamples;
@@ -102,22 +102,18 @@ struct Chirplet {
     windowPosition = 0.0f;
     windowPositionIncrement = 1.0/durationInSamples;
     setWindowPtr(nullptr);
-    // //cout << windowPositionIncrement << endl;
-    // active = false;    
+    active = false;    
   }
 
   float generateSample() { 
     float currentFrequency = osc.freq() + frequencyIncrement;
-    //cout << frequencyIncrement << endl;
     osc.freq(currentFrequency);
-    //osc.freq(tempFrequency);
     currentSample = osc();
     int index = int(windowPosition * windowArraySize);
     currentSample *= windowPtr[index];
     windowPosition = windowPosition + windowPositionIncrement;
     if (windowPosition >= 1.0f) { 
-      osc.freq(centerFrequency);
-      windowPosition -= 1.0f; 
+      active = false;
     }
     return currentSample; 
   }
@@ -126,6 +122,9 @@ struct Chirplet {
   void setWindowPtr(float* wPtr) { windowPtr = wPtr; }
 };
 
+// *****
+// Agent
+// *****
 struct Agent : Pose {
   // Agent attributes
 
@@ -156,7 +155,7 @@ struct Agent : Pose {
 
   //agent sound
   // gam::Chirplet<> chirplet;  // a Gamma sine oscillator
-  //ImpulseGenerator impulse;
+  ImpulseGenerator impulse;
   Chirplet chirp;
   float currentSample;
 
@@ -176,6 +175,8 @@ struct Agent : Pose {
     canReproduce = false;
     
     currentSample = 0.0f;
+    chirp.reset();
+    impulse.setFrequency((1/chirp.duration) * rnd::uniform(0.1f, 1.0f));
   }
   void reset() { //give agents a pos and a forward
     isDead = false;
@@ -192,6 +193,9 @@ struct Agent : Pose {
 
     currentSample = 0.0f;
     chirp.reset();
+    impulse.setFrequency((1/chirp.duration) * rnd::uniform(0.1f, 1.0f)); //random breaks between impulses
+    impulse.setMaskChance(0.6);
+    impulse.setDeviation(0.8);
   }
 
   //getters and setters
@@ -244,20 +248,15 @@ struct Agent : Pose {
   }
 
   float nextSample() {
-    currentSample = chirp.generateSample();
-    // if(impulse.generateSample() == 1.0f) { // start new chirp
-    //   chirp.setActive(true);
-    // }
-    // if (chirp.active) {
-    //   currentSample = chirp.generateSample(index);
-    // }
-    // if (chirplet.done()) {
-    //   chirplet.freq(  startFrequency, endFrequency );
-    //   chirplet.length(1); //length of chirp proportional to lifespan of agent
-    //   startFrequency = endFrequency;
-    //   endFrequency = rnd::uniform(220, 880);
-    // }
-    // return chirplet().r;
+    // currentSample = chirp.generateSample();
+    if(impulse.generateSample() == 1.0f) { // start new chirp
+      chirp.active = true;
+      chirp.windowPosition = 0.0f;
+      chirp.osc.freq(chirp.centerFrequency);
+    }
+    if (chirp.active) {
+      currentSample = chirp.generateSample();
+    }
     return currentSample;
   }
 
