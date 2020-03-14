@@ -66,15 +66,15 @@ struct ImpulseGenerator {
 };
 
 struct Chirplet {
-  // float centerFrequency;
+  //float centerFrequency;
   // float range;
-  // float windowPosition;
-  // float duration;
-   float currentSample;
-  // float* windowPtr = nullptr;
-  // int durationInSamples;
-  // double windowPositionIncrement;
-  // int windowArraySize = 1024;
+  float windowPosition;
+  float duration;
+  float currentSample;
+  float* windowPtr = nullptr;
+  int durationInSamples;
+  double windowPositionIncrement;
+  int windowArraySize = 1024;
   // bool active;
 
   gam::Sine<float> osc;
@@ -84,35 +84,27 @@ struct Chirplet {
     // centerFrequency = rnd::uniform(200, 1000);
     // range = centerFrequency * rnd::uniform(0.01, 0.5); //pick a range dependent on centerFrequency
     // //duration = 0.1;
-    // duration = rnd::uniform(0.05, 0.2);
+    duration = rnd::uniform(0.05, 0.2);
     // osc.freq((centerFrequency + range));
-    // durationInSamples = duration * 44100;
-    // windowPositionIncrement = 1.0/durationInSamples;
+    durationInSamples = duration * 44100;
+    windowPosition = 0.0f;
+    windowPositionIncrement = 1.0/durationInSamples;
+    setWindowPtr(nullptr);
     // //cout << windowPositionIncrement << endl;
     // active = false;    
   }
 
   float generateSample() { 
-    //if (active && windowPtr != nullptr) {
-      currentSample = osc();
-    //   //cout << "wp: " << windowPosition << " arrSize " << windowArraySize << endl;
-    //   int index = int(windowPosition * windowArraySize);
-    //   //cout << "index: " << index << endl;
-    //   index = std::fmin(std::fmax(index, 0), 1024);
-    //   currentSample *= windowPtr[index];
-    //   //cout << "currentSample: " << currentSample << endl;
-    //   windowPosition = windowPosition + windowPositionIncrement;
-    //  //cout << "agent index: " << index << " windowPosition " << windowPosition << " wpIncrement " << windowPositionIncrement << endl;
-    //   if (windowPosition >= 1.0f) {
-    //     windowPosition = 0.0f;
-    //     active = false;
-    //   }
-    //}
+    currentSample = osc();
+    int index = int(windowPosition * windowArraySize);
+    currentSample *= windowPtr[index];
+    windowPosition = windowPosition + windowPositionIncrement;
+    if (windowPosition >= 1.0f) { windowPosition -= 1.0f; }
     return currentSample; 
   }
 
   //void setActive(bool a) { active = a; }
-  //void setWindowPtr(float* wPtr) { windowPtr = wPtr; }
+  void setWindowPtr(float* wPtr) { windowPtr = wPtr; }
 };
 
 struct Agent : Pose {

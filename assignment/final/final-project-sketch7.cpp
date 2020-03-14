@@ -143,13 +143,13 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
     nav().pos(0, 0, 3);
 
-    // for (int i = 0; i < 1024; i++) {
-    //   hanningWindow[i] = 0.5f * (1.0f - cos((2.0f * 3.1415926 * (i/1024.0f)))/1.0f);
-    // }
+    for (int i = 0; i < 1024; i++) {
+      hanningWindow[i] = 0.5f * (1.0f - cos((2.0f * 3.1415926 * (i/1024.0f)))/1.0f);
+    }
 
-    // for (int i = 0; i < MAX_AGENT_NUM; i++) {
-    //   agents[i].chirp.setWindowPtr(hanningWindow);
-    // }
+    for (int i = 0; i < MAX_AGENT_NUM; i++) {
+      agents[i].chirp.setWindowPtr(hanningWindow);
+    }
     // cout << "filled window" << endl;
     gam::sampleRate(audioIO().framesPerSecond());
   }
@@ -227,6 +227,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
               Color col = (  agents[i].agentColor + agents[j].agentColor  ) / 2;
               Vec3f c = Vec3f(col.r, col.g, col.b);
               Agent a(p, o, m, t, c);
+              a.chirp.setWindowPtr(hanningWindow);
               tempNewAgents.push_back(a);
               //agents[i] = a; //WHERE DO WE STORE IT???
               //cout << "agent created! " << endl;
