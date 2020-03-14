@@ -143,14 +143,14 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
     nav().pos(0, 0, 3);
 
-    for (int i = 0; i < 1024; i++) {
-      hanningWindow[i] = 0.5f * (1.0f - cos((2.0f * 3.1415926 * (i/1024.0f)))/1.0f);
-    }
+    // for (int i = 0; i < 1024; i++) {
+    //   hanningWindow[i] = 0.5f * (1.0f - cos((2.0f * 3.1415926 * (i/1024.0f)))/1.0f);
+    // }
 
-    for (int i = 0; i < MAX_AGENT_NUM; i++) {
-      agents[i].chirp.setWindowPtr(hanningWindow);
-    }
-    cout << "filled window" << endl;
+    // for (int i = 0; i < MAX_AGENT_NUM; i++) {
+    //   agents[i].chirp.setWindowPtr(hanningWindow);
+    // }
+    // cout << "filled window" << endl;
     gam::sampleRate(audioIO().framesPerSecond());
   }
 
@@ -284,7 +284,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     int tempIndex = 0;
     for (int i = 0; i < MAX_AGENT_NUM; i++) {
       //cout << agents[i].cyclesBeforeAteFood << endl;
-      if (agents[i].lifespan <= 0 || (agents[i].cyclesBeforeAteFood > 600) ) { //if their lifespan is 0 or they haven't eaten food in 10 seconds, kill
+      if (agents[i].lifespan <= 0 || (agents[i].cyclesBeforeAteFood > 600)) { //if their lifespan is 0 or they haven't eaten food in 10 seconds, kill
         if (tempNewAgents.size() > 0 && i <= tempNewAgents.size()) { 
           agents[i] = tempNewAgents[tempIndex]; //new agents are added from this vector in order of them being "born"
           tempNewAgents.erase(tempNewAgents.begin() + tempIndex); // remove the one that was just added from the temp vector
@@ -486,10 +486,10 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       for (int i = 0; i < MAX_AGENT_NUM; i++) {
         if (!agents[i].isDead) {
           //cout << "agent num: " << i << endl;
-          currentSample += agents[i].nextSample(i);
+          currentSample += agents[i].nextSample();
         }
       }
-      currentSample = 1.0f/MAX_AGENT_NUM;
+      currentSample /= MAX_AGENT_NUM;
       
       // cap sound
       // if (sound >  1) { sound = 1; }

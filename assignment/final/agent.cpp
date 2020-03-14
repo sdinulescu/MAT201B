@@ -66,52 +66,53 @@ struct ImpulseGenerator {
 };
 
 struct Chirplet {
-  float centerFrequency;
-  float range;
-  float windowPosition;
-  float duration;
-  float currentSample;
-  float* windowPtr = nullptr;
-  int durationInSamples;
-  double windowPositionIncrement;
-  int windowArraySize = 1024;
-  bool active;
+  // float centerFrequency;
+  // float range;
+  // float windowPosition;
+  // float duration;
+   float currentSample;
+  // float* windowPtr = nullptr;
+  // int durationInSamples;
+  // double windowPositionIncrement;
+  // int windowArraySize = 1024;
+  // bool active;
 
   gam::Sine<float> osc;
 
   Chirplet() {
-    centerFrequency = rnd::uniform(200, 1000);
-    range = centerFrequency * rnd::uniform(0.01, 0.5); //pick a range dependent on centerFrequency
-    //duration = 0.1;
-    duration = rnd::uniform(0.05, 0.2);
-    osc.freq((centerFrequency + range));
-    durationInSamples = duration * 44100;
-    windowPositionIncrement = 1.0/durationInSamples;
-    //cout << windowPositionIncrement << endl;
-    active = false;    
+    osc.freq(rnd::uniform(100.0f, 800.0f));
+    // centerFrequency = rnd::uniform(200, 1000);
+    // range = centerFrequency * rnd::uniform(0.01, 0.5); //pick a range dependent on centerFrequency
+    // //duration = 0.1;
+    // duration = rnd::uniform(0.05, 0.2);
+    // osc.freq((centerFrequency + range));
+    // durationInSamples = duration * 44100;
+    // windowPositionIncrement = 1.0/durationInSamples;
+    // //cout << windowPositionIncrement << endl;
+    // active = false;    
   }
 
-  float generateSample(int index) { 
-    if (active && windowPtr != nullptr) {
+  float generateSample() { 
+    //if (active && windowPtr != nullptr) {
       currentSample = osc();
-      //cout << "wp: " << windowPosition << " arrSize " << windowArraySize << endl;
-      int index = int(windowPosition * windowArraySize);
-      //cout << "index: " << index << endl;
-      index = std::fmin(std::fmax(index, 0), 1024);
-      currentSample *= windowPtr[index];
-      //cout << "currentSample: " << currentSample << endl;
-      windowPosition = windowPosition + windowPositionIncrement;
-     //cout << "agent index: " << index << " windowPosition " << windowPosition << " wpIncrement " << windowPositionIncrement << endl;
-      if (windowPosition >= 1.0f) {
-        windowPosition = 0.0f;
-        active = false;
-      }
-    }
+    //   //cout << "wp: " << windowPosition << " arrSize " << windowArraySize << endl;
+    //   int index = int(windowPosition * windowArraySize);
+    //   //cout << "index: " << index << endl;
+    //   index = std::fmin(std::fmax(index, 0), 1024);
+    //   currentSample *= windowPtr[index];
+    //   //cout << "currentSample: " << currentSample << endl;
+    //   windowPosition = windowPosition + windowPositionIncrement;
+    //  //cout << "agent index: " << index << " windowPosition " << windowPosition << " wpIncrement " << windowPositionIncrement << endl;
+    //   if (windowPosition >= 1.0f) {
+    //     windowPosition = 0.0f;
+    //     active = false;
+    //   }
+    //}
     return currentSample; 
   }
 
-  void setActive(bool a) { active = a; }
-  void setWindowPtr(float* wPtr) { windowPtr = wPtr; }
+  //void setActive(bool a) { active = a; }
+  //void setWindowPtr(float* wPtr) { windowPtr = wPtr; }
 };
 
 struct Agent : Pose {
@@ -144,7 +145,7 @@ struct Agent : Pose {
 
   //agent sound
   // gam::Chirplet<> chirplet;  // a Gamma sine oscillator
-  ImpulseGenerator impulse;
+  //ImpulseGenerator impulse;
   Chirplet chirp;
   float currentSample;
 
@@ -230,13 +231,14 @@ struct Agent : Pose {
     }
   }
 
-  float nextSample(int index) {
-    if(impulse.generateSample() == 1.0f) { // start new chirp
-      chirp.setActive(true);
-    }
-    if (chirp.active) {
-      currentSample = chirp.generateSample(index);
-    }
+  float nextSample() {
+    currentSample = chirp.generateSample();
+    // if(impulse.generateSample() == 1.0f) { // start new chirp
+    //   chirp.setActive(true);
+    // }
+    // if (chirp.active) {
+    //   currentSample = chirp.generateSample(index);
+    // }
     // if (chirplet.done()) {
     //   chirplet.freq(  startFrequency, endFrequency );
     //   chirplet.length(1); //length of chirp proportional to lifespan of agent
