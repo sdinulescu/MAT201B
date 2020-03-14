@@ -229,7 +229,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
               Agent a(p, o, m, t, c);
               a.chirp.setWindowPtr(hanningWindow);
               tempNewAgents.push_back(a);
-              //agents[i] = a; //WHERE DO WE STORE IT???
               //cout << "agent created! " << endl;
             }
           }
@@ -459,6 +458,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   void reset() { //reset agents
     for (int i = 0; i < MAX_AGENT_NUM; i++) {
       agents[i].reset();
+      agents[i].chirp.setWindowPtr(hanningWindow);
     }
 
 

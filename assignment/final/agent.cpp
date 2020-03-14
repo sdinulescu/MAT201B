@@ -66,8 +66,11 @@ struct ImpulseGenerator {
 };
 
 struct Chirplet {
-  //float centerFrequency;
-  // float range;
+  float centerFrequency;
+  float terminalFrequency;
+  float frequencyIncrement;
+  float range; //unit in octaves
+  bool up;
   float windowPosition;
   float duration;
   float currentSample;
@@ -79,14 +82,23 @@ struct Chirplet {
 
   gam::Sine<float> osc;
 
-  Chirplet() {
-    osc.freq(rnd::uniform(100.0f, 800.0f));
-    // centerFrequency = rnd::uniform(200, 1000);
-    // range = centerFrequency * rnd::uniform(0.01, 0.5); //pick a range dependent on centerFrequency
-    // //duration = 0.1;
-    duration = rnd::uniform(0.05, 0.2);
+  Chirplet() { reset(); }
+
+  void reset() {
+    centerFrequency = rnd::uniform(400.0f, 500.0f);
+    range = 2.0f; //can only go one octave up or down
+    float rand = rnd::uniformS();
+    if (rand > 0) { up = true; } else { up = false; } // if it is positive, go upward. else, go downward
+    if (up) { terminalFrequency = centerFrequency * range; } 
+    else { terminalFrequency = centerFrequency / range; }
+    //cout << "center: " << centerFrequency << " terminal: " << terminalFrequency << endl;
+    //will go one octave above no matter what
+    duration = rnd::uniform(0.1, 1.9);
     // osc.freq((centerFrequency + range));
     durationInSamples = duration * 44100;
+    frequencyIncrement = (terminalFrequency - centerFrequency)/durationInSamples;
+    //cout << frequencyIncrement << endl;
+    osc.freq(centerFrequency);
     windowPosition = 0.0f;
     windowPositionIncrement = 1.0/durationInSamples;
     setWindowPtr(nullptr);
@@ -95,11 +107,18 @@ struct Chirplet {
   }
 
   float generateSample() { 
+    float currentFrequency = osc.freq() + frequencyIncrement;
+    //cout << frequencyIncrement << endl;
+    osc.freq(currentFrequency);
+    //osc.freq(tempFrequency);
     currentSample = osc();
     int index = int(windowPosition * windowArraySize);
     currentSample *= windowPtr[index];
     windowPosition = windowPosition + windowPositionIncrement;
-    if (windowPosition >= 1.0f) { windowPosition -= 1.0f; }
+    if (windowPosition >= 1.0f) { 
+      osc.freq(centerFrequency);
+      windowPosition -= 1.0f; 
+    }
     return currentSample; 
   }
 
@@ -155,7 +174,7 @@ struct Agent : Pose {
     fitnessValue = 0.0;
     startCheckingFitness = rnd::uniformS()*10;
     canReproduce = false;
-
+    
     currentSample = 0.0f;
   }
   void reset() { //give agents a pos and a forward
@@ -172,6 +191,7 @@ struct Agent : Pose {
     canReproduce = false;
 
     currentSample = 0.0f;
+    chirp.reset();
   }
 
   //getters and setters
