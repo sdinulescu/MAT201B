@@ -294,7 +294,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     int tempIndex = 0;
     for (int i = 0; i < MAX_AGENT_NUM; i++) {
       //cout << agents[i].cyclesBeforeAteFood << endl;
-      if (agents[i].lifespan <= 0 || (agents[i].cyclesBeforeAteFood > 600)) { //if their lifespan is 0 or they haven't eaten food in 10 seconds, kill
+      if ( ( agents[i].lifespan <= 0 || ( agents[i].cyclesBeforeAteFood >= 600 ) ) && agents[i].isChirping == false) { 
+        //if their lifespan is 0 or they haven't eaten food in 10 seconds AND they aren't in the middle of making sound, kill
         if (tempNewAgents.size() > 0 && i <= tempNewAgents.size()) { 
           agents[i] = tempNewAgents[tempIndex]; //new agents are added from this vector in order of them being "born"
           tempNewAgents.erase(tempNewAgents.begin() + tempIndex); // remove the one that was just added from the temp vector
@@ -464,6 +465,9 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   // key pressed
 
   void reset() { //reset agents
+    //clear the baby vector
+    tempNewAgents.clear();
+    tempNewAgents.resize(0);
     for (int i = 0; i < MAX_AGENT_NUM; i++) {
       Agent a;
       agents[i] = a;

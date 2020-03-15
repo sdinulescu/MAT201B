@@ -56,6 +56,8 @@ struct Field {
   }
 
   void initializeFood() {
+    food.clear();
+    food.resize(0);
     for (int i = 0; i < amountOfFood; i++) {
       Food f;
       food.push_back(f);

@@ -153,6 +153,7 @@ struct Agent : Pose {
   bool canReproduce; //true if it can reproduce, false if it can't
   Color agentColor;
   bool isDead;
+  bool isChirping;
 
   int cyclesBeforeAteFood = 0;
 
@@ -193,8 +194,11 @@ struct Agent : Pose {
     canReproduce = false;
     
     currentSample = 0.0f;
+    isChirping = false;
     chirp.inherit(cF, r, d, dir);
     impulse.setFrequency((1/chirp.duration) * rnd::uniform(0.1f, 1.0f)); // this is the only "unique" parameter the agents have sound-wise
+    impulse.setMaskChance(rnd::uniform(0.2, 0.8));
+    impulse.setDeviation(rnd::uniform(0.6, 0.9));
   }
   void reset() { //give agents a pos and a forward
     isDead = false;
@@ -211,9 +215,10 @@ struct Agent : Pose {
 
     currentSample = 0.0f;
     chirp.reset();
+    isChirping = false;
     impulse.setFrequency((1/chirp.duration) * rnd::uniform(0.1f, 1.0f)); //random breaks between impulses
-    impulse.setMaskChance(0.6);
-    impulse.setDeviation(0.8);
+    impulse.setMaskChance(rnd::uniform(0.2, 0.8));
+    impulse.setDeviation(rnd::uniform(0.6, 0.9));
   }
 
   //getters and setters
@@ -266,6 +271,7 @@ struct Agent : Pose {
   }
 
   float nextSample() {
+    isChirping = chirp.active;
     // currentSample = chirp.generateSample();
     if(impulse.generateSample() == 1.0f) { // start new chirp
       chirp.active = true;
