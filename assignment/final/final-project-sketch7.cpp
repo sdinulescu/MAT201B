@@ -52,7 +52,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   ParameterInt k{"/k", "", 5, "", 1, 15};
 
   Parameter framesPerSecond{"/framesPerSecond", "", 0, "", 0, 100};
-  Parameter aliveAgents{"/aliveAgents", "", 0, "", 0, 1000}; //TO DO: USE THIS TO KEEP TRACK OF HOW MANY ARE ALIVE
+  Parameter aliveAgents{"/aliveAgents", "", MAX_AGENT_NUM, "", 0, MAX_AGENT_NUM}; //TO DO: USE THIS TO KEEP TRACK OF HOW MANY ARE ALIVE
 
   ControlGUI gui;
 
@@ -226,7 +226,17 @@ class MyApp : public DistributedAppWithState<SharedState>  {
               Vec3f t = Vec3f(  (agents[i].turnRate + agents[j].turnRate) / 2  );
               Color col = (  agents[i].agentColor + agents[j].agentColor  ) / 2;
               Vec3f c = Vec3f(col.r, col.g, col.b);
-              Agent a(p, o, m, t, c);
+              float cF = ( agents[i].chirp.centerFrequency + agents[j].chirp.centerFrequency ) / 2;
+              float r = ( agents[i].chirp.range + agents[j].chirp.range ) / 2;
+              float d = ( agents[i].chirp.duration + agents[j].chirp.duration ) / 2;
+              bool direction = false;
+              if (agents[i].chirp.up != agents[j].chirp.up) {
+                float rand = rnd::uniformS();
+                if (rand > 0) { direction = true; } else { direction = false; }
+              } else { direction = agents[i].chirp.up; }
+              //float iF = ( agents[i].impulse.getFrequency() + agents[j].impulse.getFrequency() ) / 2;
+
+              Agent a(p, o, m, t, c, cF ,r, d, direction);
               a.chirp.setWindowPtr(hanningWindow);
               tempNewAgents.push_back(a);
               //cout << "agent created! " << endl;
@@ -429,7 +439,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
         assignFitness();
         reproduce();
-        
+
         checkAgentDeath();
         eatFood();
 
@@ -455,7 +465,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
   void reset() { //reset agents
     for (int i = 0; i < MAX_AGENT_NUM; i++) {
-      agents[i].reset();
+      Agent a;
+      agents[i] = a;
       agents[i].chirp.setWindowPtr(hanningWindow);
     }
 

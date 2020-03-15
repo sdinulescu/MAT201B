@@ -105,6 +105,24 @@ struct Chirplet {
     active = false;    
   }
 
+  void inherit(float cF, float r, float d, bool dir) {
+    centerFrequency = cF;
+    range = r;
+    up = dir;
+    if (up) { terminalFrequency = centerFrequency * range; } 
+    else { terminalFrequency = centerFrequency / range; }
+    
+    duration = d;
+    durationInSamples = duration * 44100;
+    frequencyIncrement = (terminalFrequency - centerFrequency)/durationInSamples;
+    //cout << frequencyIncrement << endl;
+    osc.freq(centerFrequency);
+    windowPosition = 0.0f;
+    windowPositionIncrement = 1.0/durationInSamples;
+    setWindowPtr(nullptr);
+    active = false;    
+  }
+
   float generateSample() { 
     float currentFrequency = osc.freq() + frequencyIncrement;
     osc.freq(currentFrequency);
@@ -161,7 +179,7 @@ struct Agent : Pose {
 
   //constructors
   Agent() { reset(); } //constructor, initialize with a position and a forward
-  Agent(Vec3f p, Vec3f o, Vec3f m, Vec3f t, Vec3f c) { //everything that gets inherited
+  Agent(Vec3f p, Vec3f o, Vec3f m, Vec3f t, Vec3f c, float cF, float r, float d, bool dir) { //everything that gets inherited
     isDead = false;
     pos(p);
     faceToward(o);
@@ -175,8 +193,8 @@ struct Agent : Pose {
     canReproduce = false;
     
     currentSample = 0.0f;
-    chirp.reset();
-    impulse.setFrequency((1/chirp.duration) * rnd::uniform(0.1f, 1.0f));
+    chirp.inherit(cF, r, d, dir);
+    impulse.setFrequency((1/chirp.duration) * rnd::uniform(0.1f, 1.0f)); // this is the only "unique" parameter the agents have sound-wise
   }
   void reset() { //give agents a pos and a forward
     isDead = false;
