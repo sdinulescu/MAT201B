@@ -294,7 +294,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     int tempIndex = 0;
     for (int i = 0; i < MAX_AGENT_NUM; i++) {
       //cout << agents[i].cyclesBeforeAteFood << endl;
-      if ( ( agents[i].lifespan <= 0 || ( agents[i].cyclesBeforeAteFood >= 600 ) ) && agents[i].isChirping == false) { 
+      if ( ( agents[i].lifespan <= 0 || ( agents[i].cyclesBeforeAteFood >= 600 ) ) && agents[i].isChirping == false ) { 
         //if their lifespan is 0 or they haven't eaten food in 10 seconds AND they aren't in the middle of making sound, kill
         if (tempNewAgents.size() > 0 && i <= tempNewAgents.size()) { 
           agents[i] = tempNewAgents[tempIndex]; //new agents are added from this vector in order of them being "born"
@@ -468,12 +468,12 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     //clear the baby vector
     tempNewAgents.clear();
     tempNewAgents.resize(0);
+    //push completely new agents
     for (int i = 0; i < MAX_AGENT_NUM; i++) {
       Agent a;
       agents[i] = a;
       agents[i].chirp.setWindowPtr(hanningWindow);
     }
-
 
     foodMesh.reset();
     field.resetField();
