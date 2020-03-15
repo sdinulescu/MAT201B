@@ -178,6 +178,8 @@ struct Agent : Pose {
   Chirplet chirp;
   float currentSample;
 
+  int numFaces;
+
   //constructors
   Agent() { reset(); } //constructor, initialize with a position and a forward
   Agent(Vec3f p, Vec3f o, Vec3f m, Vec3f t, Vec3f c, float cF, float r, float d, bool dir) { //everything that gets inherited
@@ -219,6 +221,8 @@ struct Agent : Pose {
     impulse.setFrequency((1/chirp.duration) * rnd::uniform(0.1f, 1.0f)); //random breaks between impulses
     impulse.setMaskChance(rnd::uniform(0.2, 0.8));
     impulse.setDeviation(rnd::uniform(0.6, 0.9));
+
+    numFaces = 4;
   }
 
   //getters and setters
@@ -304,13 +308,15 @@ struct DrawableAgent {
   Vec3f position, forward; //agents have a position and a forward
   Vec3f up; //part of orientation -> which way is up?
   Color agentColor;
+  int numFaces;
 
   DrawableAgent() {}
 
-  DrawableAgent(Vec3f p, Vec3f f, Vec3f u, Color c) {
+  DrawableAgent(Vec3f p, Vec3f f, Vec3f u, Color c, int n) {
     position = p;
     forward = f;
     up = u;
     agentColor = c;
+    int numFaces = n;
   }
 };

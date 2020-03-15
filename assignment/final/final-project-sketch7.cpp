@@ -93,7 +93,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   void initAgents() {
-    for (int i = MAX_AGENT_NUM; i < MAX_AGENT_NUM; i++) {
+    for (int i = 0; i < MAX_AGENT_NUM; i++) {
       Agent a;
       agents[i] = a;
 
@@ -103,6 +103,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       agentMesh.normal(a.uf());
       const Vec3f& up(a.uu());
       agentMesh.color(a.agentColor);
+
+      agentShader.attribute(4, a.numFaces);
     }
   }
 
@@ -373,7 +375,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     //copy simulation agents into drawable agents for rendering
     //cout << agents.size() << endl;
     for (unsigned i = 0; i < MAX_AGENT_NUM; i++) { // set state for all the agents, no matter if they are dead or not
-      DrawableAgent a(agents[i].pos(), agents[i].uf(), agents[i].uu(), agents[i].agentColor);
+      DrawableAgent a(agents[i].pos(), agents[i].uf(), agents[i].uu(), agents[i].agentColor, agents[i].numFaces);
       state().dAgents[i] = a;
     }
 
