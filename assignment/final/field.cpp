@@ -1,5 +1,6 @@
-/* State.cpp
+/* field.cpp, written by Stejara Dinulescu
  * This file describes the properties of the environmental field
+ * A field object contains food (described in separate struct) and directional forces set up in a grid to move the agents
  */
 #pragma once 
 
@@ -9,8 +10,7 @@
 using namespace al;
 using namespace std;
 
-//complete sphere imposters for the food
-//figure out how to render these guys... don't like that they are just particles right now, not sophisticated
+//future TO DO: render the food... don't like that they are just particles right now, not sophisticated
 
 struct Food { //food in the field
   Color color;
@@ -36,11 +36,11 @@ struct Food { //food in the field
   bool isFoodConsumed() { return isConsumed; }
 };
 
-struct Field {
+struct Field { // field struct
   int amountOfFood = 500;
   vector<Food> food;
 
-  int side;
+  int side; // how many sides is the field
   vector<Vec3f> fluidForces;
   vector<float> dampingFactors;
 
@@ -52,10 +52,9 @@ struct Field {
       fluidForces.push_back(randomFluidForce);
       dampingFactors.push_back(rnd::uniform());
     }
-    cout << "make is done!" << endl;
   }
 
-  void initializeFood() {
+  void initializeFood() { // initialize a food particle, push it into a vector
     food.clear();
     food.resize(0);
     for (int i = 0; i < amountOfFood; i++) {
@@ -65,12 +64,10 @@ struct Field {
   }
 
   void resetField() { // initialize all things in the field
-    cout << "init field..." << endl;
-    make(10);
+    //cout << "init field..." << endl;
+    make(3);
     initializeFood();
-    cout << "field is initialized!" << endl;
-    //initializeForces();
-    // TO DO: add forces and other things here
+    //cout << "field is initialized!" << endl;
   }
 
   //Food
@@ -80,7 +77,7 @@ struct Field {
     }
   }
 
-  void updateFood() {
+  void updateFood() { // has the food been consumed by an agent?
     for (int i = 0; i < food.size(); i++) {
       if (food[i].isConsumed) { //if the food is consumed, remove it from the vector
         food.erase(food.begin() + i);
@@ -89,7 +86,7 @@ struct Field {
     amountOfFood = food.size();
   }
 
-  void addFood() {
+  void addFood() { // add food if there isn't enough food in teh environment
     int foodToAdd = rnd::uniform() * 100;
     //cout << "adding " << foodToAdd << " food!" << endl;
     for (int i = 0; i < foodToAdd; i++) {
@@ -115,7 +112,7 @@ struct Field {
   Vec3f getForceVector(int index) { return fluidForces[index]; }
   void dampForces() {
     for (int i = 0; i < fluidForces.size(); i++) {
-      if (fluidForces[i].mag() > 0.001) {
+      if (fluidForces[i].mag() > 0.1) {
         fluidForces[i] = fluidForces[i] * dampingFactors[i];
       } else {
         fluidForces[i] = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()); //reset the fluid force

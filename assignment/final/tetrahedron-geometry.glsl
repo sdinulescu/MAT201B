@@ -1,4 +1,5 @@
 #version 400
+// Written by Karl Yerkes, adjusted by Stejara Dinulescu
 
 layout(points) in;
 layout(triangle_strip, max_vertices = 31) out;
@@ -75,6 +76,7 @@ void main() {
   for (int i = 0; i < n; i++) {
     float angle = 360.0 * i / vertex[0].faceCount;
     base[i].position = pm * vec4(position + (rotationMatrix(forward, radians(angle)) * vec4(over, 0.0)).xyz * vertex[0].color.w, 1.0);
+    // size is affected by lifespan, which is reflected in the color transparency value -> addition by Stejara Dinulescu
     base[i].color = agentColor;
   }
 

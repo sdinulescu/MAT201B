@@ -1,4 +1,4 @@
-/* State.cpp
+/* state.cpp, written by Stejara Dinulescu
  * This file describes the properties of the shared state -> for the renderers
  */
 

@@ -1,6 +1,7 @@
-/* Agent.cpp
+/* agent.cpp
  * This file describes the properties and functionality of an "agent" -> this is for the simulation
  * This file also describes the properties of a "drawable agent" -> this is for the renderers ONLY
+ * Agents have sound as well, described by Chirplet struct, which is generated using an impulse generator (struct)
  */
 
 #pragma once
@@ -66,6 +67,7 @@ struct ImpulseGenerator {
 };
 // ********
 // Chirplet
+// Written by Stejara Dinulescu, with influence from the Chirplet class in the Gamma sound library
 // ********
 struct Chirplet {
   float centerFrequency; //starting frequency of chirplet
@@ -107,7 +109,7 @@ struct Chirplet {
     active = false;    
   }
 
-  void inherit(float cF, float r, float d, bool dir) {
+  void inherit(float cF, float r, float d, bool dir) { // describes how the sound is inherited to offspring
     centerFrequency = cF;
     range = r;
     up = dir;
@@ -125,7 +127,7 @@ struct Chirplet {
     active = false;    
   }
 
-  float generateSample() { 
+  float generateSample() { //generate the agent's sample
     float currentFrequency = osc.freq() + frequencyIncrement;
     osc.freq(currentFrequency);
     currentSample = osc();
@@ -138,12 +140,12 @@ struct Chirplet {
     return currentSample; 
   }
 
-  //void setActive(bool a) { active = a; }
-  void setWindowPtr(float* wPtr) { windowPtr = wPtr; }
+  void setWindowPtr(float* wPtr) { windowPtr = wPtr; } // pass the hanning window in for each agent, found in the main file
 };
 
 // *****
 // Agent
+// Written by Stejara Dinulescu
 // *****
 struct Agent : Pose {
   // Agent attributes
@@ -281,7 +283,7 @@ struct Agent : Pose {
     }
   }
 
-  float nextSample() {
+  float nextSample() { //get the agent's sample -> chirplet's generateSample
     isChirping = chirp.active;
     // currentSample = chirp.generateSample();
     if(impulse.generateSample() == 1.0f) { // start new chirp
@@ -295,7 +297,7 @@ struct Agent : Pose {
     return currentSample;
   }
 
-  float randomCull(Vec3f cullPosition, float radius) {
+  float randomCull(Vec3f cullPosition, float radius) { // how many agents get culled?
     float cullingThreshold = 0.8;
     float distance = (pos() - cullPosition).mag();
 

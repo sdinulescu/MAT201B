@@ -1,8 +1,13 @@
 /* final.cpp
  * Written by Stejara Dinulescu
- * This is my final project for MAT201B, taught by Karl Yerkes.
+ * This is my final project for MAT201B during Winter 2020, taught by Karl Yerkes.
  * This program is a simulated environment of flocking agents. 
- * Incorporating an evolutionary algorithm, as time progresses, we see changes in flocking shape.
+ * Incorporating an evolutionary algorithm, as time progresses, we see changes in agent shape, color, and flocking patterns.
+ * Basic structure of the Environment: food, flow field, random culling (where agents die in a certain location in random periods of time)
+ * Basic structure of the Agent: size/shape, lifespan, flocking parameters, color, chirplet sound, fitness value
+ * 
+ * Using: AlloLib and Gamma by the AlloSphere Research Group, Cuttlebone by Karl Yerkes
+ * Suporting files: field.cpp, agent.cpp, state.cpp
  */
   
 //allolib includes
@@ -28,20 +33,29 @@ using namespace std;
 string slurp(string fileName); 
 HashSpace space(6, MAX_AGENT_NUM);
 
+// Distributed app allows us to structure our program and run it in multiple windows (i.e. "renderers") in the sphere
+// SharedState (the state described by state.cpp) contains everything that is passed to the renderers for drawing
+// Everything that isn't in shared state is needed for the simulation, which happens only on one machine
 class MyApp : public DistributedAppWithState<SharedState>  {
   //global vars/containers
-  const float FITNESS_CUTOFF = 10.0;
-  Agent agents[MAX_AGENT_NUM];
-  vector<Agent> tempNewAgents;
-
-  bool freeze = false;
-  float timing = rnd::uniform(1,1000);
+  Agent agents[MAX_AGENT_NUM]; // data structure that stores the agents in the system
+  vector<Agent> tempNewAgents; // this a temporary vector that holds all the new agents that are to be added in the system after reproduction
+  // if there is space is the agents array, new agents are added frmo the tempNewAgents vector in the order that they were created
+  Field field; // field
+  float hanningWindow[1024]; //this is the hanning window passed to each agent for their chirplet sound
+  // misc
+  bool freeze = false; // flag that freezes the whole system on a keypress (spacebar)
+  float timing = rnd::uniform(1,1000); // how often does the culling happen from the environment?
+  const float FITNESS_CUTOFF = 100.0; // what is the cutoff for a "fit" agent?
   unsigned counter = 0;
+  
   //Gui params
   //flocking params
+  ParameterInt k{"/k", "", 5, "", 1, 15};
+  Parameter localRadius{"/localRadius", "", 0.18, "", 0.01, 1.0};
+  // system/state params
   Parameter backgroundColor{"/backgroundColor", "", 0.1, "", 0, 1};
   Parameter rate{"/rate", "", 0.015, "", 0.01, 0.1};
-  Parameter localRadius{"/localRadius", "", 0.18, "", 0.01, 1.0};
   Parameter size{"/size", "", 1.5, "", 0.0, 4.0};
   Parameter ratio{"/ratio", "", 1.5, "", 0.0, 4.0};
   //evolution params
@@ -49,31 +63,25 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   Parameter foodDistanceThreshold{"/foodDistanceThreshold", "", 0.05, "", 0.0, 1.0}; // have to be this far away to eat food
   Parameter decreaseLifespanAmount{"/decreaseLifespanAmount", "", 0.01, "", 0.0, 1.0};
   Parameter reproductionProbabilityThreshold{"/reproductionProbabilityThreshold", "", 200, "", 0, 500};
-  ParameterInt k{"/k", "", 5, "", 1, 15};
-
+  //these params show us how many frames per second we have, as well as how many agents are in the system
   Parameter framesPerSecond{"/framesPerSecond", "", 0, "", 0, 100};
   Parameter aliveAgents{"/aliveAgents", "", MAX_AGENT_NUM, "", 0, MAX_AGENT_NUM}; //TO DO: USE THIS TO KEEP TRACK OF HOW MANY ARE ALIVE
+  ControlGUI gui; //gui object
+  
+  //Cuttlebone
+  std::shared_ptr<CuttleboneStateSimulationDomain<SharedState>> cuttleboneDomain; //for cuttlebone -> passing large amounts of data across a network
 
-  ControlGUI gui;
-
-  std::shared_ptr<CuttleboneStateSimulationDomain<SharedState>>
-      cuttleboneDomain;
-
+  //shaders
   ShaderProgram agentShader;
   ShaderProgram foodShader;
-
+  //meshes
   Mesh agentMesh;
   Mesh foodMesh;
   Mesh cullMesh;
-
-  Field field;
-
-  float hanningWindow[1024];
-
  //***********************************************************************
  //Everything needed for onCreate
 
-  void initCuttlebone() {
+  void initCuttlebone() { //initializes cuttlebone
     //cuttlebone
     cuttleboneDomain =
         CuttleboneStateSimulationDomain<SharedState>::enableCuttlebone(this);
@@ -83,16 +91,16 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
-  void initGuiAndPassParams() {
+  void initGuiAndPassParams() { // initializes gui, passes in the params
     //gui
-    gui << backgroundColor << rate << localRadius << k << size 
-        << ratio << reproductionDistanceThreshold << foodDistanceThreshold 
+    gui << backgroundColor << rate << size << ratio << localRadius << k 
+        << reproductionDistanceThreshold << foodDistanceThreshold 
         << decreaseLifespanAmount << reproductionProbabilityThreshold 
         << framesPerSecond << aliveAgents;
     gui.init();
   }
 
-  void initAgents() {
+  void initAgents() { // initialize agents
     for (int i = 0; i < MAX_AGENT_NUM; i++) {
       Agent a;
       agents[i] = a;
@@ -107,7 +115,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
-  void initFoodMesh() {
+  void initFoodMesh() { //initialize food
     for(int i = 0; i < field.getAmountOfFood(); i++) {
       foodMesh.vertex(field.food[i].getPosition());
       foodMesh.color(field.food[i].getColor());
@@ -119,10 +127,9 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   //onCreate
 
   void onCreate() override {
-
+    // initialize everything
     initCuttlebone();
     initGuiAndPassParams();
-    
     navControl().useMouse(false);
 
     // compile shaders
@@ -133,25 +140,25 @@ class MyApp : public DistributedAppWithState<SharedState>  {
                    slurp("../point-fragment.glsl"),
                    slurp("../point-geometry.glsl"));
 
-    //mesh
+    //set up mesh
     agentMesh.primitive(Mesh::POINTS);
     foodMesh.primitive(Mesh::POINTS);
     cullMesh.primitive(Mesh::POINTS);
 
     field.resetField(); //initializes the field (fills the food array, initializes forces)
     initFoodMesh(); //init the food mesh with food vector
-    initAgents(); //init the agent mesh with agent vector
+    initAgents(); //init the agent mesh with agent array
 
     nav().pos(0, 0, 3);
 
+    //fill the hanning window, pass it to each agent
     for (int i = 0; i < 1024; i++) {
       hanningWindow[i] = 0.5f * (1.0f - cos((2.0f * 3.1415926 * (i/1024.0f)))/1.0f);
     }
-
     for (int i = 0; i < MAX_AGENT_NUM; i++) {
       agents[i].chirp.setWindowPtr(hanningWindow);
     }
-    // cout << "filled window" << endl;
+    //set sample rate for audio
     gam::sampleRate(audioIO().framesPerSecond());
   }
 
@@ -178,8 +185,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
-  // **************** CHANGE ****************
-  void respawnFood() { // TO DO: only respawn food if something is triggered in the environment
+  void respawnFood() { // potential future TO DO: only respawn food if something is triggered in the environment
     int foodThreshold = 250;
     if (field.getAmountOfFood() < foodThreshold) { //if there are less than X food particles in the field
     //cout << "food is under " << foodThreshold << endl;
@@ -187,7 +193,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     }
   }
 
-  void applyForces() {
+  void applyForces() { //apply the field force on the agents located in that area
     //take an agent, find out the grid space that it is in
     for (int i = 0; i < MAX_AGENT_NUM; i++) {
       if (agents[i].isDead) { continue; }
@@ -196,23 +202,23 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       Vec3f forceField = field.getForceVector(index); //get the force vector to apply to the agent
       agents[i].pos(agents[i].pos() + forceField * rate);
     }
-    field.dampForces();
+    field.dampForces(); // damp the forces a bit, otherwise, you can't see the flocking
   }
 
   //reproduce between two boids
   void reproduce() { 
     for (int i = 0; i < MAX_AGENT_NUM; i++) {
       if (agents[i].isDead) { continue; }
-      agents[i].checkReproduction(reproductionProbabilityThreshold);
-      if (agents[i].canReproduce) {
+      agents[i].checkReproduction(reproductionProbabilityThreshold); // check if the agents are able to reproduce (probability based)
+      if (agents[i].canReproduce) { // if they can reproduce,
         //check nearest neighbor
         HashSpace::Query query(k);
         int results = query(space, agents[i].pos() * space.dim(),
                           space.maxRadius() * localRadius);
-        for (int j = 0; j < results; j++) {
+        for (int j = 0; j < results; j++) { // these are the nearby boids
           int id = query[j]->id;
           if (agents[id].isDead) { continue; }
-          if (agents[id].canReproduce == false) { continue; }
+          if (agents[id].canReproduce == false) { continue; } 
           //only reproduce if the nearest neighbor is alive AND can also reproduce
           //cout << "both agents can reproduce... will they make spawn???" << endl;
           float distance = Vec3f(  agents[id].pos() - agents[i].pos()  ).mag(); //check their distance
@@ -249,7 +255,6 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       }
       agents[i].canReproduce = false;     //reset reproduction boolean
     }
-
     //cout << "baby number: " << tempNewAgents.size() << endl;
   }
 
@@ -312,21 +317,22 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     aliveAgents = agentCounter;
   }
 
-  void cull() {
-    if (counter % (int)timing == 0) { //cull
+  void cull() { // random culling from the environment
+    if (counter % (int)timing == 0) { //if it is time to cull based on timing value, then apply the culling
       //cout << "cull" << endl;
-      Vec3f cullPosition = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS());
-      float radius = rnd::uniform() * 100.0;
+      Vec3f cullPosition = Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()); //pick a random position to cull
+      float radius = rnd::uniform() * 100.0; // pick a random radius
 
-      //add a cull to the mesh
+      //add a cull to the mesh -> this is only if we want to visualize this culling
       cullMesh.reset();
       cullMesh.vertex(cullPosition);
       cullMesh.color(Color(rnd::uniform(), rnd::uniform(), rnd::uniform(), 0.3));
       cullMesh.texCoord(radius, 0);
 
+      // check if the agent is in the cull position -> if it is, kill it
       for (int i = 0; i < MAX_AGENT_NUM; i++) {
         if (agents[i].isDead) { continue; }
-        agents[i].randomCull(cullPosition, radius); //cull every second
+        agents[i].randomCull(cullPosition, radius);
       }
 
       timing = rnd::uniform(1,1000); //reset timing
@@ -334,10 +340,10 @@ class MyApp : public DistributedAppWithState<SharedState>  {
   }
 
   //flocking
-  void calcFlocking() {
+  void calcFlocking() { // calculate the average heading, center, and flockCount for each agent
     for (unsigned i = 0; i < MAX_AGENT_NUM; i++) {
       if (agents[i].isDead) { continue; }
-      agents[i].incrementLifespan(-1 * decreaseLifespanAmount);
+      agents[i].incrementLifespan(-1 * decreaseLifespanAmount); //every loop iteration, decrease the lifespan a bit
       Vec3f avgHeading(0, 0, 0);
       Vec3f centerPos(0, 0, 0);
       agents[i].flockCount = 0; //reset flock count
@@ -396,7 +402,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
     state().ratio = ratio.get();
   }
 
-  //visualize
+  //visualize everything (update the meshes)
   void visualizeAgents() { // visualize the agents, update meshes using DrawableAgent in state (for ALL screens)
     agentMesh.reset();
     for (unsigned i = 0; i < MAX_AGENT_NUM; i++) {
@@ -503,17 +509,10 @@ class MyApp : public DistributedAppWithState<SharedState>  {
       currentSample = 0.0;
       for (int i = 0; i < MAX_AGENT_NUM; i++) {
         if (!agents[i].isDead) {
-          //cout << "agent num: " << i << endl;
-          currentSample += agents[i].nextSample();
+          currentSample += agents[i].nextSample(); // get samples from all of the agents
         }
       }
       currentSample /= MAX_AGENT_NUM;
-      
-      // cap sound
-      // if (sound >  1) { sound = 1; }
-      // if (sound < -1) { sound = -1; }
-
-      //cout << sound << endl;
       io.out(0) = io.out(1) = currentSample;    // write the signal to channels 0 and 1
     }
   }
@@ -559,8 +558,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
 
 int main() {
   MyApp app;
-    // Enable audio with 2 channels of output.
-  app.configureAudio(44100, 2048, 2, 0);
+  app.configureAudio(44100, 2048, 2, 0); // Enable audio with 2 channels of output.
   app.start();
 }
 
