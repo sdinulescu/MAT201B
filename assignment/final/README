@@ -1,0 +1,20 @@
+*********************
+MAT201B Final Project
+Stejara Dinulescu
+*********************
+
+1. This project is built in C++ using AlloLib by the Allosphere Research Group. To run the project, you must have AlloLib downloaded from GitHub. I am using VS Code to modify files and run the project.
+2. My final project is found in my MAT201B GitHub repository (https://github.com/sdinulescu/MAT201B) under assignment/final. To run the program, you must in the allolib_playground directory. From there, use ./run.sh [yourDirectory]/assignment/final/final.cpp.
+3. Structure of the program:
+	- "final.cpp" is the main file. This is what needs to be run from the terminal.
+	- "agent.cpp": supporting file describing an agent
+		- ImpulseGenerator -> written by Aaron Anderson, taken from Pedal (a pedagogical audio library) by Aaron Anderson and Keehong Youn
+		- Chirplet -> describes an agent sound (in form of a chirplet)
+		- Agent -> describes an agent
+		- DrawableAgent -> what is given to the renderers
+	- "field.cpp": supporting file describing the environmental field
+		- Food -> food particles consumed by the agent
+		- Forces -> fluid simulation
+	- "state.cpp": supporting file describing the Shared State. This describes what is given to the renderers when run in the AlloSphere or when run in multiple windows simulating runtime in the AlloSphere.
+4. Final Project Report is found in the pdf titled MAT201B_StejaraDinulescu_FinalProjectReport.pdf.
+5. Supporting screenshots are included (found in my report, see point number 4)
