@@ -230,6 +230,8 @@ class MyApp : public DistributedAppWithState<SharedState>  {
               float cF = ( agents[i].chirp.centerFrequency + agents[j].chirp.centerFrequency ) / 2;
               float r = ( agents[i].chirp.range + agents[j].chirp.range ) / 2;
               float d = ( agents[i].chirp.duration + agents[j].chirp.duration ) / 2;
+              int nF = int(( agents[i].faceCount + agents[j].faceCount ) / 2);
+              float s = ( agents[i].spikiness + agents[j].spikiness ) / 2;
               bool direction = false;
               if (agents[i].chirp.up != agents[j].chirp.up) {
                 float rand = rnd::uniformS();
@@ -237,7 +239,7 @@ class MyApp : public DistributedAppWithState<SharedState>  {
               } else { direction = agents[i].chirp.up; }
               //float iF = ( agents[i].impulse.getFrequency() + agents[j].impulse.getFrequency() ) / 2;
 
-              Agent a(p, o, m, t, c, cF ,r, d, direction);
+              Agent a(p, o, m, t, c, cF ,r, d, direction, nF, s);
               a.chirp.setWindowPtr(hanningWindow);
               tempNewAgents.push_back(a);
               //cout << "agent created! " << endl;

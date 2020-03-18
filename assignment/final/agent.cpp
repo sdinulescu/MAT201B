@@ -185,7 +185,7 @@ struct Agent : Pose {
 
   //constructors
   Agent() { reset(); } //constructor, initialize with a position and a forward
-  Agent(Vec3f p, Vec3f o, Vec3f m, Vec3f t, Vec3f c, float cF, float r, float d, bool dir) { //everything that gets inherited
+  Agent(Vec3f p, Vec3f o, Vec3f m, Vec3f t, Vec3f c, float cF, float r, float d, bool dir, int nF, float s) { //everything that gets inherited
     isDead = false;
     pos(p);
     faceToward(o);
@@ -205,8 +205,8 @@ struct Agent : Pose {
     impulse.setMaskChance(rnd::uniform(0.2, 0.8));
     impulse.setDeviation(rnd::uniform(0.6, 0.9));
 
-    faceCount = (int)rnd::uniform(1, 10);
-    spikiness = rnd::uniform();
+    faceCount = nF;
+    spikiness = s;
   }
   void reset() { //give agents a pos and a forward
     isDead = false;
