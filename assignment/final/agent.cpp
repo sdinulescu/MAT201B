@@ -8,6 +8,8 @@
 using namespace al;
 // ************************************************************
 // Impulse Generator struct taken from Pedal, by Aaron Anderson
+// https://github.com/aaronaanderson/Pedal
+// ImpulseGenerator.cpp found under Pedal/src/generators/ImpulseGenerator.cpp (commit number: c922916)
 // ************************************************************
 struct ImpulseGenerator {
   float frequency, phase, period;
@@ -80,7 +82,7 @@ struct Chirplet {
   int windowArraySize = 1024; //how big the window data is
   bool active; //whether the chirplet is active or not
 
-  gam::Sine<float> osc; //one sine tone
+  gam::Sine<float> osc; //one sine tone, from the Gamma library
 
   Chirplet() { reset(); }
 
@@ -178,7 +180,8 @@ struct Agent : Pose {
   Chirplet chirp;
   float currentSample;
 
-  int numFaces;
+  int faceCount;
+  float spikiness;
 
   //constructors
   Agent() { reset(); } //constructor, initialize with a position and a forward
@@ -201,6 +204,9 @@ struct Agent : Pose {
     impulse.setFrequency((1/chirp.duration) * rnd::uniform(0.1f, 1.0f)); // this is the only "unique" parameter the agents have sound-wise
     impulse.setMaskChance(rnd::uniform(0.2, 0.8));
     impulse.setDeviation(rnd::uniform(0.6, 0.9));
+
+    faceCount = (int)rnd::uniform(1, 10);
+    spikiness = rnd::uniform();
   }
   void reset() { //give agents a pos and a forward
     isDead = false;
@@ -222,7 +228,8 @@ struct Agent : Pose {
     impulse.setMaskChance(rnd::uniform(0.2, 0.8));
     impulse.setDeviation(rnd::uniform(0.6, 0.9));
 
-    numFaces = 4;
+    faceCount = (int)rnd::uniform(1, 10);
+    spikiness = rnd::uniform();
   }
 
   //getters and setters
@@ -308,15 +315,17 @@ struct DrawableAgent {
   Vec3f position, forward; //agents have a position and a forward
   Vec3f up; //part of orientation -> which way is up?
   Color agentColor;
-  int numFaces;
+  int faceCount;
+  float spikiness;
 
   DrawableAgent() {}
 
-  DrawableAgent(Vec3f p, Vec3f f, Vec3f u, Color c, int n) {
+  DrawableAgent(Vec3f p, Vec3f f, Vec3f u, Color c, int n, float s) {
     position = p;
     forward = f;
     up = u;
     agentColor = c;
-    int numFaces = n;
+    faceCount = n;
+    spikiness = s;
   }
 };

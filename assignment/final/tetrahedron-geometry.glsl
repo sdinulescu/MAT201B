@@ -1,18 +1,19 @@
 #version 400
 
 layout(points) in;
-layout(triangle_strip, max_vertices = 9) out;
+layout(triangle_strip, max_vertices = 31) out;
 
 in Vertex {
   vec3 position;
   vec3 forward;
   vec3 up;
   vec4 color;
-  int numFaces;
+  int faceCount;
+  float spikiness;
 }
 vertex[];
 
-out Fragment {  //
+out Fragment {
   vec4 color;
 }
 fragment;
@@ -37,366 +38,49 @@ mat4 rotationMatrix(vec3 axis, float angle) {
       oc * axis.z * axis.z + c, 0.0, 0.0, 0.0, 0.0, 1.0);
 }
 
+struct Base {
+  vec4 position;
+  vec4 color;
+};
+
+void make_triangle(vec4 nose, Base b1, Base b2, vec4 tail, float spikiness) {
+  gl_Position = nose;
+  fragment.color = vec4(1.0, 1.0, 1.0, 1.0);
+  EmitVertex();
+
+  gl_Position = b1.position;
+  fragment.color = b1.color;
+  EmitVertex();
+
+  gl_Position = mix(b2.position, tail, spikiness);
+  fragment.color = mix(b2.color, vec4(1.0), spikiness);
+  EmitVertex();
+}
+
+const int N = 7;
+
 void main() {
   mat4 pm = al_ProjectionMatrix * al_ModelViewMatrix;
   vec3 position = vertex[0].position;
-  vec3 forward = vertex[0].forward * size / (0.1 + vertex[0].color.w); 
+  vec3 forward = vertex[0].forward * size;
   vec3 up = vertex[0].up;
-  vec4 color = vertex[0].color;
+  vec4 agentColor = vertex[0].color;
 
   vec3 over = cross(up, forward) * ratio;
 
-  if (vertex[0].numFaces == 3) {
-    vec4 a = pm * vec4(position + forward, 1.0);
-    vec4 b =
-        pm *
-        vec4(position +
-                (rotationMatrix(forward, radians(60)) * vec4(over, 0.0)).xyz,
-            1.0f);
-    vec4 c =
-        pm *
-        vec4(position +
-                (rotationMatrix(forward, radians(180)) * vec4(over, 0.0)).xyz,
-            1.0f);
-    vec4 d =
-        pm *
-        vec4(position +
-                (rotationMatrix(forward, radians(300)) * vec4(over, 0.0)).xyz,
-            1.0f);
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = b;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = c;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = c;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = d;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = d;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = b;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-  } else if (vertex[0].numFaces == 4) {
-    vec4 a = pm * vec4(position + forward, 1.0);
-    vec4 b =
-        pm *
-        vec4(position +
-                (rotationMatrix(forward, radians(30)) * vec4(over, 0.0)).xyz,
-            1.0f);
-    vec4 c =
-        pm *
-        vec4(position +
-                (rotationMatrix(forward, radians(120)) * vec4(over, 0.0)).xyz,
-            1.0f);
-    vec4 d =
-        pm *
-        vec4(position +
-                (rotationMatrix(forward, radians(210)) * vec4(over, 0.0)).xyz,
-            1.0f);
-
-    vec4 e =
-    pm *
-    vec4(position +
-              (rotationMatrix(forward, radians(300)) * vec4(over, 0.0)).xyz,
-          1.0f); 
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = b; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = c;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = c; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = d;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = d; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = e;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = b; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = e;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-  } else if (vertex[0].numFaces == 5) {
-    vec4 a = pm * vec4(position + forward, 1.0);
-    vec4 b =
-        pm *
-        vec4(position +
-                (rotationMatrix(forward, radians(0)) * vec4(over, 0.0)).xyz,
-            1.0f);
-    vec4 c =
-        pm *
-        vec4(position +
-                (rotationMatrix(forward, radians(108)) * vec4(over, 0.0)).xyz,
-            1.0f);
-    vec4 d =
-        pm *
-        vec4(position +
-                (rotationMatrix(forward, radians(216)) * vec4(over, 0.0)).xyz,
-            1.0f);
-    vec4 e =
-    pm *
-    vec4(position +
-              (rotationMatrix(forward, radians(324)) * vec4(over, 0.0)).xyz,
-          1.0f); 
-
-    vec4 f =
-    pm *
-    vec4(position +
-              (rotationMatrix(forward, radians(432)) * vec4(over, 0.0)).xyz,
-          1.0f); 
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = b; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = c;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = c; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = d;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = d; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = e;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = e; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = f;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = f; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = b;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-  } else {
-    vec4 a = pm * vec4(position + forward, 1.0);
-    vec4 b =
-        pm *
-        vec4(position +
-                (rotationMatrix(forward, radians(0)) * vec4(over, 0.0)).xyz,
-            1.0f);
-    vec4 c =
-        pm *
-        vec4(position +
-                (rotationMatrix(forward, radians(120)) * vec4(over, 0.0)).xyz,
-            1.0f);
-    vec4 d =
-        pm *
-        vec4(position +
-                (rotationMatrix(forward, radians(240)) * vec4(over, 0.0)).xyz,
-            1.0f);
-    vec4 e =
-    pm *
-    vec4(position +
-              (rotationMatrix(forward, radians(360)) * vec4(over, 0.0)).xyz,
-          1.0f); 
-    vec4 f =
-    pm *
-    vec4(position +
-              (rotationMatrix(forward, radians(480)) * vec4(over, 0.0)).xyz,
-          1.0f); 
-    vec4 g =
-    pm *
-    vec4(position +
-              (rotationMatrix(forward, radians(600)) * vec4(over, 0.0)).xyz,
-          1.0f); 
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = b; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = c;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = c; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = d;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = d; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = e;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = e; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = f;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = f; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = g;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = a;
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = g; 
-    fragment.color = color;
-    EmitVertex();
-
-    gl_Position = b;
-    fragment.color = color;
-    EmitVertex();
-
-    EndPrimitive();
+  vec4 nose = pm * vec4(position + forward, 1.0);
+
+  int n = vertex[0].faceCount > N ? N : vertex[0].faceCount;
+  Base base[N];
+  for (int i = 0; i < n; i++) {
+    float angle = 360.0 * i / vertex[0].faceCount;
+    base[i].position = pm * vec4(position + (rotationMatrix(forward, radians(angle)) * vec4(over, 0.0)).xyz, 1.0);
+    base[i].color = agentColor;
   }
+
+  vec4 tail = pm * vec4(position, 1.0);
+  for (int i = 1; i < n; i++) {
+    make_triangle(nose, base[i - 1], base[i], tail, vertex[0].spikiness);
+  }
+  make_triangle(nose, base[vertex[0].faceCount - 1], base[0], tail, vertex[0].spikiness);
 }
